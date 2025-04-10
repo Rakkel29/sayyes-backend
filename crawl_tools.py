@@ -39,37 +39,51 @@ def get_local_images(category: str) -> list[dict]:
     
     # Create result list with file paths and basic descriptions
     result = []
-    for img_path in image_files:
+    for i, img_path in enumerate(image_files):
         filename = os.path.basename(img_path)
         name = os.path.splitext(filename)[0]
         
         # Create a description based on filename
         if category == 'venues':
+            title = name.title()
             description = f"Beautiful {name} wedding venue"
             result.append({
-                "url": img_path,
+                "image": img_path,
+                "title": title,
                 "description": description,
-                "name": name.title()
+                "location": "Various locations",
+                "price": "$$$" if i % 3 == 0 else ("$$" if i % 3 == 1 else "$"),
+                "tags": ["Elegant", "Venue", "Wedding"]
             })
         elif category == 'dresses':
+            title = f"Designer Dress {i+1}"
             description = f"Elegant {name} wedding dress"
             result.append({
-                "url": img_path,
+                "image": img_path,
+                "title": title,
                 "description": description,
-                "designer": "Designer Collection"
+                "designer": "Designer Collection",
+                "price": "$$$" if i % 3 == 0 else ("$$" if i % 3 == 1 else "$"),
+                "tags": ["Elegant", "Dress", "Wedding"]
             })
         elif category == 'hairstyles':
+            title = f"Hairstyle {i+1}"
             description = f"Stunning {name} wedding hairstyle"
             result.append({
-                "url": img_path,
-                "description": description
+                "image": img_path,
+                "title": title,
+                "description": description,
+                "tags": ["Elegant", "Hairstyle", "Wedding"]
             })
         else:
             # Generic format for other categories
+            title = f"{category.title()} {i+1}"
             description = f"{name.title()} for weddings"
             result.append({
-                "url": img_path,
-                "description": description
+                "image": img_path,
+                "title": title,
+                "description": description,
+                "tags": ["Wedding", category.title()]
             })
     
     return result 

@@ -1,6 +1,7 @@
 openai==1.14.2
-langgraph==0.0.39
+langchain==0.1.0
 langchain-core==0.1.52
+langgraph==0.0.39
 html2text==2024.2.25
 python-dotenv==1.0.1
 requests==2.31.0

@@ -6,13 +6,14 @@ import json
 import os
 import asyncio
 from dotenv import load_dotenv
-from langchain.tools import tool
+from langchain.tools import tool, Tool
 from langchain.agents import AgentExecutor, initialize_agent, AgentType
 from langchain.schema import FunctionMessage
 from crawl_tools import get_images_from_url, get_local_images
-from langchain.prompts import ChatPromptTemplate
+from langchain.prompts import ChatPromptTemplate, PromptTemplate
 from crawl4ai import crawl
 from blob_images import get_images_by_category
+from langchain.memory import ConversationBufferMemory
 
 # Load environment variables from .env file
 load_dotenv()
@@ -359,3 +360,95 @@ def create_openai_functions_agent(tools, prompt):
     return AgentWrapper()
 
 sayyes_agent = create_openai_functions_agent(tools, prompt)
+
+# Initialize memory
+memory = ConversationBufferMemory(
+    memory_key="chat_history",
+    return_messages=True
+)
+
+# Create the agent
+agent = AgentExecutor.from_agent_and_tools(
+    agent=llm,
+    tools=tools,
+    memory=memory,
+    verbose=True
+)
+
+def process_message(message: str) -> dict:
+    """Process a user message and return a response with images if relevant."""
+    # Check for keywords to determine what type of images to show
+    message_lower = message.lower()
+    
+    # Initialize response structure
+    response = {
+        "text": "",
+        "carousel": {
+            "items": []
+        }
+    }
+    
+    # Determine category based on keywords
+    category = None
+    if any(word in message_lower for word in ["venue", "location", "place", "where"]):
+        category = "venues"
+    elif any(word in message_lower for word in ["dress", "gown", "outfit"]):
+        category = "dresses"
+    elif any(word in message_lower for word in ["hair", "hairstyle", "style"]):
+        category = "hairstyles"
+    elif any(word in message_lower for word in ["cake", "dessert", "sweet"]):
+        category = "cakes"
+    
+    if category:
+        # Get images for the category
+        images = get_wedding_images(category)
+        
+        # Set response text based on category
+        if category == "venues":
+            response["text"] = "Here are some gorgeous venues in Austin!"
+            for image in images:
+                response["carousel"]["items"].append({
+                    "image": image["image"],
+                    "title": image["title"],
+                    "description": image["description"],
+                    "location": image["location"],
+                    "price": image["price"],
+                    "tags": image["tags"]
+                })
+        elif category == "dresses":
+            response["text"] = "Here are some stunning wedding dresses!"
+            for image in images:
+                response["carousel"]["items"].append({
+                    "image": image["image"],
+                    "title": image["title"],
+                    "description": image["description"],
+                    "designer": image["designer"],
+                    "price": image["price"],
+                    "tags": image["tags"]
+                })
+        elif category == "hairstyles":
+            response["text"] = "Here are some beautiful wedding hairstyles!"
+            for image in images:
+                response["carousel"]["items"].append({
+                    "image": image["image"],
+                    "title": image["title"],
+                    "description": image["description"],
+                    "tags": image["tags"]
+                })
+        elif category == "cakes":
+            response["text"] = "Here are some delicious wedding cakes!"
+            for image in images:
+                response["carousel"]["items"].append({
+                    "image": image["image"],
+                    "title": image["title"],
+                    "description": image["description"],
+                    "tags": image["tags"]
+                })
+    else:
+        # If no specific category is mentioned, provide a general response
+        response["text"] = "I'd be happy to help you find beautiful wedding venues, dresses, hairstyles, or cakes! What would you like to see?"
+    
+    # Print debug information about the response
+    print("\nSending image carousel:", json.dumps(response, indent=2))
+    
+    return response

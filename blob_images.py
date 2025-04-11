@@ -18,7 +18,7 @@ def list_venue_images():
     folder = "wedding venues"
     images = [
         {
-            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{folder}/{quote(filename)}",
+            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.public.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
             "title": clean_title(filename),
             "description": "Elegant wedding venue in Austin",
             "location": "Austin, TX",
@@ -45,7 +45,7 @@ def list_dress_images():
     folder = "wedding dresses"
     return [
         {
-            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{folder}/{quote(filename)}",
+            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.public.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
             "title": clean_title(filename),
             "description": "Beautiful wedding dress",
             "designer": "Designer Collection",
@@ -66,7 +66,7 @@ def list_hairstyle_images():
     folder = "wedding hairstyles"
     return [
         {
-            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{folder}/{quote(filename)}",
+            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.public.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
             "title": clean_title(filename),
             "description": "Stunning wedding hairstyle",
             "tags": ["Hairstyle", "Wedding"],
@@ -85,7 +85,7 @@ def list_cake_images():
     folder = "wedding cakes"
     return [
         {
-            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{folder}/{quote(filename)}",
+            "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.public.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
             "title": clean_title(filename),
             "description": "Delicious wedding cake",
             "price": "$$$",

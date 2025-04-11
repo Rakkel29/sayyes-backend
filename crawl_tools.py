@@ -2,6 +2,7 @@ from crawl4ai import AsyncWebCrawler
 from bs4 import BeautifulSoup
 import os
 import glob
+from urllib.parse import quote
 
 async def get_images_from_url(url: str) -> list[str]:
     async with AsyncWebCrawler() as crawler:
@@ -28,6 +29,17 @@ def get_local_images(category: str) -> list[dict]:
     Returns:
         List of dictionaries with image information
     """
+    # Map categories to their proper blob storage folder names
+    folder_map = {
+        'venues': 'wedding venues',
+        'dresses': 'wedding dresses',
+        'hairstyles': 'hairstyles',
+        'cakes': 'wedding cakes'
+    }
+    
+    # Get the proper folder name for the category
+    folder = folder_map.get(category, category)
+    
     base_dir = os.path.join('assets', category)
     
     # Check if directory exists
@@ -48,7 +60,7 @@ def get_local_images(category: str) -> list[dict]:
             title = name.title()
             description = f"Beautiful {name} wedding venue"
             result.append({
-                "image": img_path,
+                "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
                 "title": title,
                 "description": description,
                 "location": "Various locations",
@@ -59,7 +71,7 @@ def get_local_images(category: str) -> list[dict]:
             title = f"Designer Dress {i+1}"
             description = f"Elegant {name} wedding dress"
             result.append({
-                "image": img_path,
+                "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
                 "title": title,
                 "description": description,
                 "designer": "Designer Collection",
@@ -70,7 +82,7 @@ def get_local_images(category: str) -> list[dict]:
             title = f"Hairstyle {i+1}"
             description = f"Stunning {name} wedding hairstyle"
             result.append({
-                "image": img_path,
+                "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
                 "title": title,
                 "description": description,
                 "tags": ["Elegant", "Hairstyle", "Wedding"]
@@ -80,7 +92,7 @@ def get_local_images(category: str) -> list[dict]:
             title = f"{category.title()} {i+1}"
             description = f"{name.title()} for weddings"
             result.append({
-                "image": img_path,
+                "image": f"https://{os.getenv('VERCEL_PROJECT_ID')}.blob.vercel-storage.com/{quote(folder)}/{quote(filename)}",
                 "title": title,
                 "description": description,
                 "tags": ["Wedding", category.title()]

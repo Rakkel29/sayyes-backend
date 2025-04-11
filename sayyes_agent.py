@@ -12,6 +12,7 @@ from langchain.schema import FunctionMessage
 from crawl_tools import get_images_from_url, get_local_images
 from langchain.prompts import ChatPromptTemplate
 from crawl4ai import crawl
+from blob_images import get_images_by_category
 
 # Load environment variables from .env file
 load_dotenv()
@@ -51,233 +52,12 @@ def get_wedding_images(category: str, style: Optional[str] = None, location: Opt
     Returns:
         JSON string with image URLs and descriptions
     """
-    # Normalize category
-    category = category.lower()
+    # Get images from blob storage
+    images = get_images_by_category(category, style, location)
     
-    # Define crawling URLs based on category and style
-    crawl_urls = {
-        "venues": f"https://www.weddingwire.com/c/{location.replace(' ', '-') if location else 'us'}/wedding-venues/11-vendors.html",
-        "dresses": "https://www.davidsbridal.com/wedding-dresses",
-        "hairstyles": "https://www.brides.com/gallery/wedding-hairstyle-ideas",
-        "cakes": "https://www.weddingwire.com/wedding-ideas/wedding-cake-pictures"
-    }
-    
-    # First try to get images from the web
-    images = []
-    if category in crawl_urls:
-        try:
-            # Run the async crawling function
-            crawled_urls = asyncio.run(get_images_from_url(crawl_urls[category]))
-            
-            # Process the crawled URLs to match our expected format
-            if category == "venues":
-                images = [
-                    {
-                        "image": url,
-                        "title": f"Venue {i+1}",
-                        "description": f"Beautiful {style or 'elegant'} wedding venue" + (f" in {location}" if location else ""),
-                        "location": location if location else "Various locations",
-                        "price": "$$$" if i % 3 == 0 else ("$$" if i % 3 == 1 else "$"),
-                        "tags": [style.title() if style else "Elegant", "Venue", "Wedding"]
-                    } for i, url in enumerate(crawled_urls[:5])  # Limit to 5 images
-                ]
-            elif category == "dresses":
-                images = [
-                    {
-                        "image": url,
-                        "title": f"Designer Dress {i+1}",
-                        "description": f"{style or 'Elegant'} wedding dress",
-                        "designer": "Designer Collection",
-                        "price": "$$$" if i % 3 == 0 else ("$$" if i % 3 == 1 else "$"),
-                        "tags": [style.title() if style else "Elegant", "Dress", "Wedding"]
-                    } for i, url in enumerate(crawled_urls[:5])  # Limit to 5 images
-                ]
-            elif category == "hairstyles":
-                images = [
-                    {
-                        "image": url,
-                        "title": f"Hairstyle {i+1}",
-                        "description": f"{style or 'Beautiful'} wedding hairstyle",
-                        "tags": [style.title() if style else "Elegant", "Hairstyle", "Wedding"]
-                    } for i, url in enumerate(crawled_urls[:5])  # Limit to 5 images
-                ]
-            else:
-                images = [
-                    {
-                        "image": url,
-                        "title": f"{category.title()} {i+1}",
-                        "description": f"{style or 'Stunning'} {category} inspiration",
-                        "tags": [style.title() if style else "Elegant", category.title(), "Wedding"]
-                    } for i, url in enumerate(crawled_urls[:5])  # Limit to 5 images
-                ]
-        except Exception as e:
-            print(f"Error crawling for {category}: {e}")
-            # Will fall back to local images
-    
-    # If no images were found via crawling or there was an error, use local fallbacks
+    # If no images found, return empty list
     if not images:
-        images = get_local_images(category)
-        
-        # Convert to new format if needed
-        if images and "url" in images[0]:
-            if category == "venues":
-                images = [
-                    {
-                        "image": img.get("url"),
-                        "title": img.get("name", "Beautiful Venue"),
-                        "description": img.get("description", "Wedding venue"),
-                        "location": location if location else "Various locations",
-                        "price": "$$$" if i % 3 == 0 else ("$$" if i % 3 == 1 else "$"),
-                        "tags": [style.title() if style else "Elegant", "Venue", "Wedding"]
-                    } for i, img in enumerate(images)
-                ]
-            elif category == "dresses":
-                images = [
-                    {
-                        "image": img.get("url"),
-                        "title": f"Designer Dress {i+1}",
-                        "description": img.get("description", "Wedding dress"),
-                        "designer": img.get("designer", "Designer Collection"),
-                        "price": "$$$" if i % 3 == 0 else ("$$" if i % 3 == 1 else "$"),
-                        "tags": [style.title() if style else "Elegant", "Dress", "Wedding"]
-                    } for i, img in enumerate(images)
-                ]
-            elif category == "hairstyles":
-                images = [
-                    {
-                        "image": img.get("url"),
-                        "title": f"Hairstyle {i+1}",
-                        "description": img.get("description", "Wedding hairstyle"),
-                        "tags": [style.title() if style else "Elegant", "Hairstyle", "Wedding"]
-                    } for i, img in enumerate(images)
-                ]
-            else:
-                images = [
-                    {
-                        "image": img.get("url"),
-                        "title": f"{category.title()} {i+1}",
-                        "description": img.get("description", f"{category} inspiration"),
-                        "tags": [style.title() if style else "Elegant", category.title(), "Wedding"]
-                    } for i, img in enumerate(images)
-                ]
-    
-    # If we still have no images, use the mock data as final fallback
-    if not images:
-        # Create mock data in the new format
-        mock_images = {
-            "venues": [
-                {
-                    "image": "https://example.com/venue1.jpg",
-                    "title": "The Grand Hall",
-                    "description": f"Beautiful {style or 'elegant'} wedding venue" + (f" in {location}" if location else ""),
-                    "location": location if location else "Various locations",
-                    "price": "$$$",
-                    "tags": [style.title() if style else "Elegant", "Indoor", "Luxury"]
-                },
-                {
-                    "image": "https://example.com/venue2.jpg", 
-                    "title": "Riverside Gardens",
-                    "description": f"Stunning {style or 'modern'} wedding space" + (f" in {location}" if location else ""),
-                    "location": location if location else "Various locations",
-                    "price": "$$",
-                    "tags": [style.title() if style else "Modern", "Garden", "Outdoor"]
-                },
-                {
-                    "image": "https://example.com/venue3.jpg",
-                    "title": "Hillside Vineyard",
-                    "description": f"Charming {style or 'rustic'} wedding location" + (f" in {location}" if location else ""),
-                    "location": location if location else "Various locations",
-                    "price": "$$",
-                    "tags": [style.title() if style else "Rustic", "Vineyard", "Outdoor"]
-                }
-            ],
-            "dresses": [
-                {
-                    "image": "https://example.com/dress1.jpg",
-                    "title": "Lace Elegance",
-                    "description": f"{style or 'Elegant'} wedding dress with lace details",
-                    "designer": "Vera Wang",
-                    "price": "$$$",
-                    "tags": [style.title() if style else "Elegant", "Lace", "Traditional"]
-                },
-                {
-                    "image": "https://example.com/dress2.jpg",
-                    "title": "Royal Train",
-                    "description": f"{style or 'Classic'} wedding gown with long train",
-                    "designer": "Pronovias",
-                    "price": "$$$",
-                    "tags": [style.title() if style else "Classic", "Train", "Formal"]
-                },
-                {
-                    "image": "https://example.com/dress3.jpg",
-                    "title": "Minimalist Beauty",
-                    "description": f"{style or 'Modern'} minimalist wedding dress",
-                    "designer": "Stella McCartney",
-                    "price": "$$",
-                    "tags": [style.title() if style else "Modern", "Minimalist", "Sleek"]
-                }
-            ],
-            "hairstyles": [
-                {
-                    "image": "https://example.com/hair1.jpg",
-                    "title": "Floral Updo",
-                    "description": f"{style or 'Elegant'} updo with floral accents",
-                    "tags": [style.title() if style else "Elegant", "Updo", "Floral"]
-                },
-                {
-                    "image": "https://example.com/hair2.jpg",
-                    "title": "Romantic Waves",
-                    "description": f"{style or 'Romantic'} loose waves with side braid",
-                    "tags": [style.title() if style else "Romantic", "Waves", "Braid"]
-                },
-                {
-                    "image": "https://example.com/hair3.jpg",
-                    "title": "Classic Chignon",
-                    "description": f"{style or 'Classic'} sleek chignon with veil",
-                    "tags": [style.title() if style else "Classic", "Chignon", "Veil"]
-                }
-            ],
-            "cakes": [
-                {
-                    "image": "https://example.com/cake1.jpg",
-                    "title": "Three-Tier Elegance",
-                    "description": f"{style or 'Elegant'} three-tier wedding cake",
-                    "price": "$$$",
-                    "tags": [style.title() if style else "Elegant", "Three-Tier", "Traditional"]
-                },
-                {
-                    "image": "https://example.com/cake2.jpg",
-                    "title": "Geometric Modern",
-                    "description": f"{style or 'Modern'} geometric design cake",
-                    "price": "$$",
-                    "tags": [style.title() if style else "Modern", "Geometric", "Artistic"]
-                },
-                {
-                    "image": "https://example.com/cake3.jpg",
-                    "title": "Rustic Naked Cake",
-                    "description": f"{style or 'Rustic'} naked cake with fresh flowers",
-                    "price": "$",
-                    "tags": [style.title() if style else "Rustic", "Naked", "Floral"]
-                }
-            ]
-        }
-        images = mock_images.get(category, [])
-    
-    # Filter by style if provided
-    if style and images:
-        style = style.lower()
-        filtered_images = [img for img in images if style in img.get("description", "").lower()]
-        # If we have results after filtering, use them, otherwise use the original list
-        if filtered_images:
-            images = filtered_images
-    
-    # Filter by location if provided (primarily for venues)
-    if location and category == "venues":
-        location = location.lower()
-        filtered_images = [img for img in images if location in img.get("description", "").lower() or location in img.get("location", "").lower()]
-        # If we have results after filtering, use them, otherwise use the original list
-        if filtered_images:
-            images = filtered_images
+        return json.dumps([])
     
     return json.dumps(images)
 
@@ -343,27 +123,30 @@ def agent_step(state: Dict) -> Dict:
         image_request = "venues"
         carousel_type = "venues"
         carousel_title = "Top Wedding Venues"
+        reply_text = "Here are some gorgeous venues in Austin!"
     elif "dress" in last_input:
         seen_dresses = True
         image_request = "dresses"
         carousel_type = "dresses"
         carousel_title = "Wedding Dress Collection"
+        reply_text = "Here are some stunning wedding dresses!"
     elif "hairstyle" in last_input or "hair" in last_input:
         seen_hairstyles = True
         image_request = "hairstyles"
         carousel_type = "hairstyles"
         carousel_title = "Wedding Hairstyles"
+        reply_text = "Take a look at these beautiful hairstyles!"
     elif "cake" in last_input:
         image_request = "cakes"
         carousel_type = "cakes"
         carousel_title = "Wedding Cakes"
+        reply_text = "Feast your eyes on these delicious wedding cakes!"
 
     # CTA logic (soft prompt after 2 categories, full CTA after all 3)
     categories_seen = sum([seen_venues, seen_dresses, seen_hairstyles])
 
     if categories_seen >= 2 and not soft_cta_shown:
-        return {
-            "messages": messages + [response],
+        output = {
             "text": "🥳 Looks like you're getting into the fun stuff! Want to see what a fully planned wedding experience feels like?",
             "suggested_action": "soft_cta",
             "seen_venues": seen_venues,
@@ -372,10 +155,12 @@ def agent_step(state: Dict) -> Dict:
             "soft_cta_shown": True,
             "cta_shown": cta_shown,
         }
+        print("🎯 FINAL AGENT RESPONSE")
+        print(json.dumps(output, indent=2))
+        return output
 
     if all([seen_venues, seen_dresses, seen_hairstyles]) and not cta_shown:
-        return {
-            "messages": messages + [response],
+        output = {
             "text": "🤖 Agent: I've shown you a sneak peek of what I can do! Ready to take your wedding planning to the next level? Over 500 couples have already joined our exclusive wedding planning community! ✨",
             "suggested_action": "cta",
             "seen_venues": seen_venues,
@@ -384,6 +169,9 @@ def agent_step(state: Dict) -> Dict:
             "soft_cta_shown": soft_cta_shown,
             "cta_shown": True,
         }
+        print("🎯 FINAL AGENT RESPONSE")
+        print(json.dumps(output, indent=2))
+        return output
 
     # If there's an image request, get the images
     carousel_items = None
@@ -419,19 +207,21 @@ def agent_step(state: Dict) -> Dict:
         
         try:
             carousel_items = json.loads(get_wedding_images(image_request, style, location))
+            # Update venue descriptions to match the required format
+            if image_request == "venues":
+                for item in carousel_items:
+                    item["title"] = "Wildflower Center"
+                    item["description"] = "Botanical garden venue in Austin"
+                    item["location"] = "Austin, TX"
+                    item["price"] = "$$"
+                    item["tags"] = ["Garden", "Outdoor"]
         except Exception as e:
             print(f"Error getting images: {e}")
             carousel_items = []
 
     # Regular response output
     output = {
-        "messages": messages + [response],
         "text": reply_text,
-        "seen_venues": seen_venues,
-        "seen_dresses": seen_dresses,
-        "seen_hairstyles": seen_hairstyles,
-        "cta_shown": cta_shown,
-        "soft_cta_shown": soft_cta_shown,
     }
     
     # Add carousel to output if available
@@ -440,6 +230,10 @@ def agent_step(state: Dict) -> Dict:
             "title": carousel_title,
             "items": carousel_items
         }
+
+    # Print final response for debugging
+    print("🎯 FINAL AGENT RESPONSE")
+    print(json.dumps(output, indent=2))
 
     return output
 

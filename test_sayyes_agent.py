@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from sayyes_agent import sayyes_agent
-from langchain.schema import HumanMessage
+from sayyes_agent import SayYesAgent
+from langchain_core.messages import HumanMessage
 
 # Load environment variables from .env file if present
 load_dotenv()
@@ -27,7 +27,7 @@ def test_agent(query):
     print(f"\n=== Testing query: '{query}' ===")
     
     try:
-        result = sayyes_agent.invoke(initial_state)
+        result = SayYesAgent.invoke(initial_state)
         
         print("\nReply:", result["reply"])
         print("\nSuggested Action:", result["suggested_action"])

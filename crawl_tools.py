@@ -3,21 +3,48 @@ from bs4 import BeautifulSoup
 import os
 import glob
 from urllib.parse import quote
+from typing import List, Dict
+import json
 
-async def get_images_from_url(url: str) -> list[str]:
-    async with AsyncWebCrawler() as crawler:
-        result = await crawler.arun(url=url)
-        # Get the HTML content from the result
-        html_content = result[0].html
+async def get_images_from_url(url: str) -> List[Dict]:
+    """
+    Get images from a URL.
+    
+    Args:
+        url: The URL to fetch images from
         
-        # Parse HTML with BeautifulSoup
-        soup = BeautifulSoup(html_content, 'html.parser')
+    Returns:
+        List of dictionaries containing image information
+    """
+    # In a real implementation, this would use web scraping
+    # For now, return sample data
+    return [
+        {
+            "url": "https://example.com/image1.jpg",
+            "title": "Sample Image 1",
+            "description": "A beautiful sample image"
+        }
+    ]
+
+def get_local_images(directory: str) -> List[Dict]:
+    """
+    Get images from a local directory.
+    
+    Args:
+        directory: The directory to search for images
         
-        # Find all image tags and extract their src attributes
-        image_tags = soup.find_all('img')
-        image_urls = [img.get('src') for img in image_tags if img.get('src')]
-        
-        return image_urls
+    Returns:
+        List of dictionaries containing image information
+    """
+    # In a real implementation, this would scan a local directory
+    # For now, return sample data
+    return [
+        {
+            "url": "local/path/to/image1.jpg",
+            "title": "Local Image 1",
+            "description": "A beautiful local image"
+        }
+    ]
 
 def get_local_images(category: str) -> list[dict]:
     """

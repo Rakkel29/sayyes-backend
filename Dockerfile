@@ -1,4 +1,4 @@
-FROM python:3.9.18-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 
@@ -19,6 +19,10 @@ COPY . .
 
 # Expose the port the app runs on
 EXPOSE 8080
+
+# Add healthcheck
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8080/api/health || exit 1
 
 # Command to run the application
 CMD ["python", "app.py"] 

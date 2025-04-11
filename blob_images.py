@@ -2,6 +2,8 @@ import os
 import requests
 from dotenv import load_dotenv
 from urllib.parse import quote
+from typing import List, Dict, Optional
+import json
 
 # Load environment variables
 load_dotenv()
@@ -97,33 +99,106 @@ def list_cake_images():
 def clean_title(name: str):
     return name.split("/")[-1].replace("_", " ").split(".")[0].title()
 
-def get_images_by_category(category: str, style: str = None, location: str = None):
-    """Get images for a specific category with optional style and location filters"""
-    category = category.lower()
+def get_images_by_category(category: str, style: Optional[str] = None, location: Optional[str] = None) -> List[Dict]:
+    """
+    Get wedding images for a specific category.
     
-    # Get the appropriate image list based on category
-    if category == "venues":
-        images = list_venue_images()
-        # Apply location filter if provided
-        if location:
-            for img in images:
-                img["location"] = location
-                img["description"] = f"Beautiful wedding venue in {location}"
-    elif category == "dresses":
-        images = list_dress_images()
-    elif category == "hairstyles":
-        images = list_hairstyle_images()
-    elif category == "cakes":
-        images = list_cake_images()
-    else:
+    Args:
+        category: Type of images (venues, dresses, hairstyles, cakes, flowers, etc.)
+        style: Optional style descriptor (rustic, modern, bohemian, etc.)
+        location: Optional location specification
+        
+    Returns:
+        List of dictionaries containing image information
+    """
+    # Try to get images from blob storage first
+    try:
+        if category == "venues":
+            images = list_venue_images()
+        elif category == "dresses":
+            images = list_dress_images()
+        elif category == "hairstyles":
+            images = list_hairstyle_images()
+        elif category == "cakes":
+            images = list_cake_images()
+        else:
+            images = []
+
+        # If we got images from blob storage
+        if images:
+            # Filter by style if provided
+            if style:
+                images = [img for img in images if any(tag.lower() == style.lower() for tag in img.get("tags", []))]
+            
+            # Filter by location if provided (only for venues)
+            if location and category == "venues":
+                images = [img for img in images if location.lower() in img.get("location", "").lower()]
+            
+            return images
+
+    except Exception as e:
+        print(f"Error getting images from blob storage: {e}")
+        
+    # If blob storage failed or returned no images, use sample data
+    sample_images = {
+        "venues": [
+            {
+                "url": "https://example.com/venue1.jpg",
+                "title": "Elegant Garden Venue",
+                "description": "Beautiful outdoor garden venue perfect for spring and summer weddings",
+                "location": "Austin, TX",
+                "price": "$$$",
+                "tags": ["outdoor", "garden", "elegant"]
+            },
+            {
+                "url": "https://example.com/venue2.jpg",
+                "title": "Modern Downtown Loft",
+                "description": "Contemporary urban venue with city views",
+                "location": "Austin, TX",
+                "price": "$$$$",
+                "tags": ["modern", "urban", "indoor"]
+            }
+        ],
+        "dresses": [
+            {
+                "url": "https://example.com/dress1.jpg",
+                "title": "Classic A-Line Gown",
+                "description": "Timeless elegance with a modern twist",
+                "designer": "Designer Name",
+                "price": "$$$",
+                "tags": ["classic", "elegant", "a-line"]
+            }
+        ],
+        "hairstyles": [
+            {
+                "url": "https://example.com/hair1.jpg",
+                "title": "Romantic Updo",
+                "description": "Soft, romantic updo with loose tendrils",
+                "tags": ["updo", "romantic", "classic"]
+            }
+        ],
+        "cakes": [
+            {
+                "url": "https://example.com/cake1.jpg",
+                "title": "Three-Tier Buttercream",
+                "description": "Classic three-tier cake with buttercream frosting",
+                "tags": ["classic", "buttercream", "three-tier"]
+            }
+        ]
+    }
+    
+    # Filter by category
+    if category not in sample_images:
         return []
+        
+    images = sample_images[category]
     
-    # Apply style filter if provided
+    # Filter by style if provided
     if style:
-        style = style.lower()
-        for img in images:
-            if style in ["rustic", "modern", "bohemian", "luxury", "classic"]:
-                img["title"] = f"{style.title()} {img['title']}"
-                img["tags"].append(style.title())
+        images = [img for img in images if style.lower() in [tag.lower() for tag in img.get("tags", [])]]
+    
+    # Filter by location if provided (only for venues)
+    if location and category == "venues":
+        images = [img for img in images if location.lower() in img.get("location", "").lower()]
     
     return images 

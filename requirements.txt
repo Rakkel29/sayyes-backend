@@ -1,9 +1,7 @@
-openai==1.14.2
 langchain==0.1.10
 langchain-core==0.1.31
 langgraph==0.0.36
-html2text==2024.2.25
-python-dotenv==1.0.1
-requests==2.31.0
 flask==2.2.5
-flask-cors==4.0.0 
+flask-cors==4.0.0
+html2text==2024.2.25
+python-dotenv==1.0.1 

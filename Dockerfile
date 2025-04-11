@@ -1,21 +1,18 @@
-FROM python:3.9-slim
+FROM python:3.9.18-slim
 
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    python3-dev \
-    && rm -rf /var/lib/apt/lists/*
+# Install build essentials
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip and install build tools
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel
+# Upgrade pip
+RUN pip install --no-cache-dir pip==23.0.1 setuptools==67.6.1 wheel==0.40.0
 
-# Copy requirements first for better layer caching
+# Copy and install requirements
 COPY requirements.txt .
-
-# Install Python packages with verbose output
-RUN pip install --no-cache-dir -v -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY . .

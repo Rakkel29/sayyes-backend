@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-from langchain.schema import HumanMessage, AIMessage
-from langchain.chat_models import ChatOpenAI
-from langchain.agents import AgentExecutor, initialize_agent, AgentType
-from langchain.tools import Tool
+from langchain_core.messages import HumanMessage, AIMessage
+from langchain_community.chat_models import ChatOpenAI
+from langchain_community.agents import AgentExecutor, initialize_agent, AgentType
+from langchain_community.tools import Tool
 import json
 from blob_images import get_images_by_category
 

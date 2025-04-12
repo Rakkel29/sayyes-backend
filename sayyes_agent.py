@@ -13,7 +13,7 @@ from crawl_tools import get_images_from_url, get_local_images
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from blob_images import get_images_by_category
 from langchain.memory import ConversationBufferMemory
-from langchain_community.tools import TavilySearchResults
+from langchain.tools import TavilySearchResults
 from bs4 import BeautifulSoup
 import requests
 import html2text

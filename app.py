@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from flask_cors import CORS
 import logging
 from langchain_core.messages import HumanMessage
-from sayyes_agent import chain  # import your compiled LangGraph chain
+from sayyes_agent import process_message  # import the process_message function
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -33,24 +33,12 @@ def chat():
         # Log incoming request
         logger.info(f"Received chat request: {data}")
         
-        # Extract messages from request
-        messages = data.get("messages", [])
+        # Extract message and state from request
+        message = data.get("message", "")
+        state = data.get("state", None)
         
-        # Initialize state for the agent
-        state = {
-            "messages": [HumanMessage(content=messages[-1]["content"])],
-            "chat_history": [],
-            "seen_venues": False,
-            "seen_dresses": False,
-            "seen_hairstyles": False,
-            "cta_shown": False,
-            "soft_cta_shown": False,
-            "style_preference": None,
-            "location_preference": None
-        }
-        
-        # Invoke the LangGraph chain
-        result = chain.invoke(state)
+        # Process the message
+        result = process_message(message, state)
         
         # Return the result
         return jsonify(result), 200

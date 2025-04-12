@@ -1,28 +1,22 @@
-FROM python:3.11-slim
+# Use a slim Python 3.9 base image
+FROM python:3.9-slim
 
+# Set working directory inside the container
 WORKDIR /app
 
-# Install build essentials
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
-    rm -rf /var/lib/apt/lists/*
-
-# Upgrade pip
-RUN pip install --no-cache-dir pip==23.0.1 setuptools==67.6.1 wheel==0.40.0
-
-# Copy and install requirements
+# Copy and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy the rest of the application
 COPY . .
 
-# Expose the port the app runs on
+# Environment variables (Render uses these)
+ENV FLASK_APP=app.py
+ENV FLASK_ENV=production
+
+# Expose the port (Render uses 8080)
 EXPOSE 8080
 
-# Add healthcheck
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/api/health || exit 1
-
-# Command to run the application
-CMD ["python", "app.py"] 
+# Command to run the app
+CMD ["python", "app.py"]

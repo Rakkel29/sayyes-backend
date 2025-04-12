@@ -99,7 +99,7 @@ def list_cake_images():
 def clean_title(name: str):
     return name.split("/")[-1].replace("_", " ").split(".")[0].title()
 
-def get_images_by_category(category: str, style: Optional[str] = None, location: Optional[str] = None) -> List[Dict]:
+def get_images_by_category(category: str, style: Optional[str] = None, location: Optional[str] = None) -> Dict:
     """
     Get wedding images for a specific category.
     
@@ -109,20 +109,25 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
         location: Optional location specification
         
     Returns:
-        List of dictionaries containing image information
+        Dictionary with text and carousel structure
     """
     # Try to get images from blob storage first
     try:
         if category == "venues":
             images = list_venue_images()
+            title = "Wedding Venues"
         elif category == "dresses":
             images = list_dress_images()
+            title = "Wedding Dress Collection"
         elif category == "hairstyles":
             images = list_hairstyle_images()
+            title = "Wedding Hairstyles"
         elif category == "cakes":
             images = list_cake_images()
+            title = "Wedding Cakes"
         else:
             images = []
+            title = f"{category.title()} Collection"
 
         # If we got images from blob storage
         if images:
@@ -134,7 +139,14 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
             if location and category == "venues":
                 images = [img for img in images if location.lower() in img.get("location", "").lower()]
             
-            return images
+            # Return in the exact structure specified
+            return {
+                "text": f"Here's what I found for you!",
+                "carousel": {
+                    "title": title,
+                    "items": images
+                }
+            }
 
     except Exception as e:
         print(f"Error getting images from blob storage: {e}")
@@ -143,7 +155,7 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
     sample_images = {
         "venues": [
             {
-                "url": "https://example.com/venue1.jpg",
+                "image": "https://example.com/venue1.jpg",
                 "title": "Elegant Garden Venue",
                 "description": "Beautiful outdoor garden venue perfect for spring and summer weddings",
                 "location": "Austin, TX",
@@ -151,7 +163,7 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
                 "tags": ["outdoor", "garden", "elegant"]
             },
             {
-                "url": "https://example.com/venue2.jpg",
+                "image": "https://example.com/venue2.jpg",
                 "title": "Modern Downtown Loft",
                 "description": "Contemporary urban venue with city views",
                 "location": "Austin, TX",
@@ -161,7 +173,7 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
         ],
         "dresses": [
             {
-                "url": "https://example.com/dress1.jpg",
+                "image": "https://example.com/dress1.jpg",
                 "title": "Classic A-Line Gown",
                 "description": "Timeless elegance with a modern twist",
                 "designer": "Designer Name",
@@ -171,7 +183,7 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
         ],
         "hairstyles": [
             {
-                "url": "https://example.com/hair1.jpg",
+                "image": "https://example.com/hair1.jpg",
                 "title": "Romantic Updo",
                 "description": "Soft, romantic updo with loose tendrils",
                 "tags": ["updo", "romantic", "classic"]
@@ -179,7 +191,7 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
         ],
         "cakes": [
             {
-                "url": "https://example.com/cake1.jpg",
+                "image": "https://example.com/cake1.jpg",
                 "title": "Three-Tier Buttercream",
                 "description": "Classic three-tier cake with buttercream frosting",
                 "tags": ["classic", "buttercream", "three-tier"]
@@ -189,7 +201,13 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
     
     # Filter by category
     if category not in sample_images:
-        return []
+        return {
+            "text": "I couldn't find any images for that category.",
+            "carousel": {
+                "title": f"{category.title()} Collection",
+                "items": []
+            }
+        }
         
     images = sample_images[category]
     
@@ -201,4 +219,11 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
     if location and category == "venues":
         images = [img for img in images if location.lower() in img.get("location", "").lower()]
     
-    return images 
+    # Return in the exact structure specified
+    return {
+        "text": f"Here's what I found for you!",
+        "carousel": {
+            "title": f"{category.title()} Collection",
+            "items": images
+        }
+    } 

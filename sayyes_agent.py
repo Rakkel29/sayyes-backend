@@ -124,20 +124,21 @@ def get_wedding_images(category: str, style: Optional[str] = None, location: Opt
         JSON string with image URLs and descriptions
     """
     try:
-        # First try to get images from primary source
-        images = get_images_by_category(category, style, location)
+        # Get images from blob storage
+        result = get_images_by_category(category, style, location)
         
-        # If no images found, use backup blob storage
-        if not images:
-            print(f"No images found in primary source, using backup from blob storage for {category}")
-            images = get_images_by_category(category, style, location)
-        
-        return json.dumps(images)
+        # Return the result directly as it already has the correct structure
+        return json.dumps(result)
     except Exception as e:
-        print(f"Error fetching images: {e}, using backup from blob storage")
-        # Use backup images from blob storage
-        backup_images = get_images_by_category(category, style, location)
-        return json.dumps(backup_images)
+        print(f"Error fetching images: {e}")
+        # Return a fallback response with the correct structure
+        return json.dumps({
+            "text": "I couldn't find any images for that category.",
+            "carousel": {
+                "title": f"{category.title()} Collection",
+                "items": []
+            }
+        })
 
 # Create the agent with function calling
 tools = [
@@ -261,6 +262,7 @@ def agent_step(state: Dict) -> Dict:
 
     # If there's an image request, get the images
     carousel_items = None
+    carousel_text = None
     if image_request:
         # Extract location from input if available
         location = None
@@ -291,14 +293,21 @@ def agent_step(state: Dict) -> Dict:
                 break
         
         try:
-            carousel_items = json.loads(get_wedding_images(image_request, style, location))
+            result = json.loads(get_wedding_images(image_request, style, location))
+            # Extract the carousel data from the new format
+            carousel_text = result.get("text", "")
+            carousel_data = result.get("carousel", {})
+            carousel_title = carousel_data.get("title", "")
+            carousel_items = carousel_data.get("items", [])
         except Exception as e:
             print(f"Error getting images: {e}")
             carousel_items = []
+            carousel_text = "I couldn't find any images for that category."
+            carousel_title = f"{image_request.title()} Collection"
 
     # Prepare output
     output = {
-        "text": reply_text,
+        "text": carousel_text if carousel_text else reply_text,
         "chat_history": new_chat_history,
         "seen_venues": seen_venues,
         "seen_dresses": seen_dresses,

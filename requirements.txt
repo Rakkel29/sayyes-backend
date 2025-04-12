@@ -4,9 +4,9 @@ flask-cors==4.0.0
 python-dotenv==1.0.1
 requests==2.31.0
 
-# Langchain & AI
+# LangChain & AI
 langchain==0.1.13
-langgraph==0.0.39
-langchain-openai==0.0.8
 langchain-core==0.1.32
+langchain-openai==0.0.8
+langgraph==0.0.39
 

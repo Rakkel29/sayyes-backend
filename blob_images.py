@@ -1,9 +1,8 @@
 import os
-import requests
 from dotenv import load_dotenv
 from urllib.parse import quote
 from typing import List, Dict, Optional
-import json
+from image_utils import get_images_by_category, clean_title, clean_description
 
 # Load environment variables
 load_dotenv()
@@ -94,57 +93,4 @@ def list_cake_images():
             "tags": ["Cake", "Wedding"],
         }
         for filename in filenames
-    ]
-
-def clean_title(name: str):
-    return name.split("/")[-1].replace("_", " ").split(".")[0].title()
-
-def clean_description(description: str) -> str:
-    """
-    Clean and standardize a description string.
-    
-    Args:
-        description: The description string to clean
-        
-    Returns:
-        Cleaned description string
-    """
-    # Convert to string and strip whitespace
-    description = str(description).strip()
-    
-    # Remove any duplicate descriptions that might be separated by newlines or semicolons
-    if "\n" in description:
-        description = description.split("\n")[0].strip()
-    if ";" in description:
-        description = description.split(";")[0].strip()
-    
-    return description
-
-def get_images_by_category(category: str, style: str = None, location: str = None) -> dict:
-    """Mock function that returns wedding images for a category."""
-    return {
-        "text": f"Here are some {style if style else ''} {category} {f'in {location}' if location else ''}!",
-        "carousel": {
-            "title": f"{category.title()} Collection",
-            "items": [
-                {
-                    "image": f"/images/{category}/1.jpg",
-                    "title": f"Beautiful {category.title()} 1",
-                    "description": f"A stunning {style if style else ''} {category} option",
-                    "location": location if location else "Various Locations",
-                    "price": "$$$",
-                    "buttons": ["Love it", "Share", "Save"],
-                    "tags": [style] if style else []
-                },
-                {
-                    "image": f"/images/{category}/2.jpg",
-                    "title": f"Beautiful {category.title()} 2",
-                    "description": f"Another gorgeous {style if style else ''} {category} choice",
-                    "location": location if location else "Various Locations",
-                    "price": "$$$$",
-                    "buttons": ["Love it", "Share", "Save"],
-                    "tags": [style] if style else []
-                }
-            ]
-        }
-    } 
+    ] 

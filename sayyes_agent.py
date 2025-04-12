@@ -8,16 +8,10 @@ import asyncio
 from dotenv import load_dotenv
 from langchain_core.tools import BaseTool, tool
 from langchain_core.messages import BaseMessage
-from crawl_tools import get_images_from_url, get_local_images
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
-from blob_images import get_images_by_category
 from langchain.memory import ConversationBufferMemory
 from tavily import TavilyClient
-from bs4 import BeautifulSoup
-import requests
-import html2text
-from urllib.parse import urljoin
-from scrape_utils import scrape_and_return
+from image_utils import get_images_by_category, get_images_from_url, get_local_images, scrape_and_return
 
 # Load environment variables from .env file if it exists, otherwise use OS environment
 load_dotenv(override=True)
@@ -249,20 +243,8 @@ if __name__ == "__main__":
     while True:
         user_input = input("\n🤵 You: ")
         if user_input.lower() == 'quit':
-            print("Goodbye! 👋")
             break
             
-        # Process the message
-        result = process_message(user_input, state)
-        
-        # Update state with response
-        state = result["state"]
-        
-        # Print the response
-        print("\n👰 Assistant:", result["message"])
-        
-        # If there's a carousel, show the images
-        if "carousel" in result["state"]:
-            print(f"\n📸 {result['state']['carousel']['title']}:")
-            for item in result['state']['carousel']['items']:
-                print(f"- {item.get('description', 'No description')} ({item.get('url', 'No URL')})")
+        response = process_message(user_input, state)
+        print(f"\n👰 Snatcha: {response['message']}")
+        state = response['state']

@@ -1,11 +1,26 @@
-# Environment variables
-.env
-
 # Python virtual environment
 venv/
+venv_new/
+env/
+ENV/
+
+# Python cache files
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Environment variables
+.env
+.env.local
 
 # Logs
 *.log
@@ -13,8 +28,6 @@ server.log
 
 # OS specific files
 .DS_Store
-.idea/
-.vscode/
 
 # Node modules if any
 node_modules/ 

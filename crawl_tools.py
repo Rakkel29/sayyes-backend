@@ -1,4 +1,3 @@
-from crawl4ai import AsyncWebCrawler
 from bs4 import BeautifulSoup
 import os
 import glob

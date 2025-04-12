@@ -3,9 +3,11 @@ flask==2.2.5
 flask-cors==4.0.0
 python-dotenv==1.0.1
 requests==2.31.0
+beautifulsoup4==4.12.3
+aiohttp==3.9.3
 
-# LangChain & AI
-langchain==0.1.13
-langchain-core==0.2.6
-langchain-openai==0.0.8
-langgraph==0.0.39
+# LangChain & AI (stable versions)
+langchain==0.0.352
+langchain-core==0.1.17
+langchain-openai==0.0.2
+langgraph==0.0.19

@@ -7,12 +7,12 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from langchain_core.tools import tool, Tool
-from langchain_community.agents import AgentExecutor, initialize_agent, AgentType
+from langchain.agents import AgentExecutor, initialize_agent, AgentType
 from langchain_core.messages import FunctionMessage
 from crawl_tools import get_images_from_url, get_local_images
 from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
 from blob_images import get_images_by_category
-from langchain_community.memory import ConversationBufferMemory
+from langchain.memory import ConversationBufferMemory
 from langchain_community.tools import TavilySearchResults
 from bs4 import BeautifulSoup
 import requests

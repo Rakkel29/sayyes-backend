@@ -127,7 +127,22 @@ def get_wedding_images(category: str, style: Optional[str] = None, location: Opt
         # Get images from blob storage
         result = get_images_by_category(category, style, location)
         
-        # Return the result directly as it already has the correct structure
+        # Sanitize and standardize descriptions in carousel items
+        if "carousel" in result and "items" in result["carousel"]:
+            for item in result["carousel"]["items"]:
+                # Ensure description is a string and not duplicated
+                if "description" in item:
+                    # Remove any HTML tags or special formatting
+                    description = str(item["description"]).strip()
+                    # Remove any duplicate descriptions that might be separated by newlines or semicolons
+                    if "\n" in description:
+                        description = description.split("\n")[0].strip()
+                    if ";" in description:
+                        description = description.split(";")[0].strip()
+                    # Update the description
+                    item["description"] = description
+        
+        # Return the sanitized result
         return json.dumps(result)
     except Exception as e:
         print(f"Error fetching images: {e}")

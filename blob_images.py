@@ -99,6 +99,27 @@ def list_cake_images():
 def clean_title(name: str):
     return name.split("/")[-1].replace("_", " ").split(".")[0].title()
 
+def clean_description(description: str) -> str:
+    """
+    Clean and standardize a description string.
+    
+    Args:
+        description: The description string to clean
+        
+    Returns:
+        Cleaned description string
+    """
+    # Convert to string and strip whitespace
+    description = str(description).strip()
+    
+    # Remove any duplicate descriptions that might be separated by newlines or semicolons
+    if "\n" in description:
+        description = description.split("\n")[0].strip()
+    if ";" in description:
+        description = description.split(";")[0].strip()
+    
+    return description
+
 def get_images_by_category(category: str, style: Optional[str] = None, location: Optional[str] = None) -> Dict:
     """
     Get wedding images for a specific category.
@@ -131,6 +152,11 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
 
         # If we got images from blob storage
         if images:
+            # Clean descriptions for each image
+            for image in images:
+                if "description" in image:
+                    image["description"] = clean_description(image["description"])
+            
             # Filter by style if provided
             if style:
                 images = [img for img in images if any(tag.lower() == style.lower() for tag in img.get("tags", []))]
@@ -210,6 +236,11 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
         }
         
     images = sample_images[category]
+    
+    # Clean descriptions for each image
+    for image in images:
+        if "description" in image:
+            image["description"] = clean_description(image["description"])
     
     # Filter by style if provided
     if style:

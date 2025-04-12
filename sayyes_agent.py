@@ -443,3 +443,4 @@ if __name__ == "__main__":
             print(f"\n📸 {response['carousel']['title']}:")
             for item in response['carousel']['items']:
                 print(f"- {item.get('description', 'No description')} ({item.get('url', 'No URL')})")
+                print("FINAL OUTPUT TO FRONTEND >>>", json.dumps(output, indent=2))

@@ -3,6 +3,8 @@ from flask import Flask, request, jsonify
 from dotenv import load_dotenv
 from flask_cors import CORS
 import logging
+from langchain_core.messages import HumanMessage
+from sayyes_agent import chain  # import your compiled LangGraph chain
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,19 +32,28 @@ def chat():
 
         # Log incoming request
         logger.info(f"Received chat request: {data}")
-
-        # Return test mode response
-        return jsonify({
-            "text": "Chat functionality is only available in production environment. Local testing mode active.",
-            "action": "text_only",
-            "user_info": {
-                "seen_venues": False,
-                "seen_dresses": False,
-                "seen_hairstyles": False,
-                "cta_shown": False,
-                "soft_cta_shown": False
-            }
-        }), 200
+        
+        # Extract messages from request
+        messages = data.get("messages", [])
+        
+        # Initialize state for the agent
+        state = {
+            "messages": [HumanMessage(content=messages[-1]["content"])],
+            "chat_history": [],
+            "seen_venues": False,
+            "seen_dresses": False,
+            "seen_hairstyles": False,
+            "cta_shown": False,
+            "soft_cta_shown": False,
+            "style_preference": None,
+            "location_preference": None
+        }
+        
+        # Invoke the LangGraph chain
+        result = chain.invoke(state)
+        
+        # Return the result
+        return jsonify(result), 200
 
     except Exception as e:
         logger.error(f"Error processing chat request: {str(e)}")
@@ -53,7 +64,7 @@ def health_check():
     """Health check endpoint for Render.com"""
     return jsonify({
         "status": "healthy",
-        "chat_available": False
+        "chat_available": True
     }), 200
 
 @app.route('/', methods=['GET'])
@@ -61,11 +72,11 @@ def home():
     """Root endpoint"""
     return jsonify({
         "status": "SayYes Agent API is running",
-        "chat_available": False,
-        "environment": "local testing"
+        "chat_available": True,
+        "environment": "production"
     }), 200
 
 if __name__ == '__main__':
     logger.info(f"Starting server on port {port}")
-    logger.info("Chat functionality: DISABLED (local testing mode)")
+    logger.info("Chat functionality: ENABLED (production mode)")
     app.run(host='0.0.0.0', port=port) 

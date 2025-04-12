@@ -2,6 +2,11 @@
 
 A V0-compatible HTTP endpoint for the SayYes.ai wedding planner chatbot. This API is designed to be integrated with the landing page at sayyes.ai.
 
+## Latest Update
+- Enhanced agent logic with style and location preference tracking
+- Added share_url support for all carousel items
+- Improved CTA handling and user interaction flow
+
 ## Features
 
 - Natural language conversation with a friendly wedding planner AI

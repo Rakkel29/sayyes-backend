@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from urllib.parse import quote
 from typing import List, Dict, Optional
 import json
+from sayyes_agent import scrape_and_return
 
 # Load environment variables
 load_dotenv()
@@ -175,6 +176,37 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
                     "items": images
                 }
             }
+        else:
+            # Try scraping if no images found
+            try:
+                search_query = f"{category} wedding inspiration"
+                if style:
+                    search_query += f" {style}"
+                if location:
+                    search_query += f" in {location}"
+                
+                scraped = json.loads(scrape_and_return(search_query))
+                if scraped and "images" in scraped and scraped["images"]:
+                    # Convert scraped images to our format
+                    scraped_images = []
+                    for img in scraped["images"][:5]:  # Limit to 5 images
+                        scraped_images.append({
+                            "image": img.get("url", ""),
+                            "title": img.get("alt", f"{category.title()} Image"),
+                            "description": f"Beautiful {category} for your wedding",
+                            "tags": [category, "wedding"],
+                            "buttons": ["Love it", "Share", "Save"]
+                        })
+                    
+                    return {
+                        "text": f"I found some {category} inspiration for you!",
+                        "carousel": {
+                            "title": f"{category.title()} Inspiration",
+                            "items": scraped_images
+                        }
+                    }
+            except Exception as e:
+                print(f"Error scraping images: {e}")
 
     except Exception as e:
         print(f"Error getting images from blob storage: {e}")

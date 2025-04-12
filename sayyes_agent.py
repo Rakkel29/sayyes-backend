@@ -318,6 +318,12 @@ def agent_step(state: Dict) -> Dict:
             carousel_data = result.get("carousel", {})
             carousel_title = carousel_data.get("title", "")
             carousel_items = carousel_data.get("items", [])
+            
+            # Add share_url to each carousel item
+            for item in carousel_items:
+                name_slug = item.get("title", "").lower().replace(" ", "-").replace("'", "")
+                category_slug = image_request[:-1]  # e.g., "venues" → "venue"
+                item["share_url"] = f"https://sayyes.ai/{category_slug}/{name_slug}"
         except Exception as e:
             print(f"Error getting images: {e}")
             carousel_items = []

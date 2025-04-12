@@ -10,7 +10,29 @@ class MockChatModel(BaseChatModel):
     """Mock LLM for testing."""
     def _generate(self, messages: List[Any], stop: Optional[List[str]] = None, **kwargs: Any) -> ChatResult:
         """Mock response generation."""
-        mock_message = AIMessage(content="Here are some modern wedding venues in California! I've found some beautiful options that match your style preferences. [Mock LLM Response]")
+        # Extract the planning stage from the system message
+        system_message = next((msg for msg in messages if isinstance(msg, SystemMessage)), None)
+        planning_stage = "initial"
+        if system_message:
+            for line in system_message.content.split("\n"):
+                if "Current Planning Stage:" in line:
+                    planning_stage = line.split(":")[1].strip()
+                    break
+        
+        # Generate appropriate response based on planning stage
+        if planning_stage == "initial":
+            mock_message = AIMessage(content="Hello! 👋 I'm excited to help you plan your wedding! What kind of wedding vibe are you going for? Modern, rustic, boho, or something else?")
+        elif planning_stage == "collecting_info":
+            mock_message = AIMessage(content="That sounds beautiful! Do you already have a location in mind, or would you like some suggestions?")
+        elif planning_stage == "sneak_peek":
+            mock_message = AIMessage(content="Let me show you a sneak peek of what I can do for your dream day ✨")
+        elif planning_stage == "exploring":
+            mock_message = AIMessage(content="Here are some catering ideas you might love based on your theme!")
+        elif planning_stage == "final_cta":
+            mock_message = AIMessage(content="I've shown you a sneak peek of what I can do! Ready to take your wedding planning to the next level?")
+        else:
+            mock_message = AIMessage(content="Here are some modern wedding venues in California! I've found some beautiful options that match your style preferences.")
+        
         return ChatResult(generations=[ChatGeneration(message=mock_message)])
 
     def _llm_type(self) -> str:
@@ -32,15 +54,22 @@ def test_process_message():
         ],
         'style_preference': 'modern',
         'location_preference': 'California',
+        'guest_count': 100,
+        'budget': 'moderate',
+        'food_preferences': 'Italian cuisine',
+        'special_requests': 'Outdoor ceremony',
+        'planning_stage': 'initial',
+        'info_collected': 0,
         'seen_venues': False,
         'seen_dresses': False,
         'seen_hairstyles': False,
         'cta_shown': False,
-        'soft_cta_shown': False
+        'soft_cta_shown': False,
+        'email_collected': False
     }
 
     # Test message
-    test_message = "Show me some modern wedding venues in California"
+    test_message = "I'm looking for a modern wedding venue in California"
 
     try:
         # Process the message
@@ -50,15 +79,19 @@ def test_process_message():
         print('\nAPI Response Structure:')
         print('======================')
         print(json.dumps({
-            'response': result['response'],
+            'text': result['text'],
+            'buttons': result.get('buttons', []),
             'state': {
                 'style_preference': result['state'].get('style_preference'),
                 'location_preference': result['state'].get('location_preference'),
+                'planning_stage': result['state'].get('planning_stage'),
+                'info_collected': result['state'].get('info_collected'),
                 'seen_venues': result['state'].get('seen_venues'),
                 'seen_dresses': result['state'].get('seen_dresses'),
                 'seen_hairstyles': result['state'].get('seen_hairstyles'),
                 'cta_shown': result['state'].get('cta_shown'),
                 'soft_cta_shown': result['state'].get('soft_cta_shown'),
+                'email_collected': result['state'].get('email_collected'),
                 'chat_history_length': len(result['state'].get('chat_history', [])),
             }
         }, indent=2))
@@ -66,13 +99,14 @@ def test_process_message():
         print('\nExpected Frontend Response Format:')
         print('================================')
         print('✅ Response contains main message text')
+        print('✅ Buttons are included when appropriate')
         print('✅ State tracking is preserved')
         print('✅ Chat history is maintained')
         
         # Verify the structure matches what frontend expects
-        assert 'response' in result, "Response field is missing"
+        assert 'text' in result, "Text field is missing"
         assert 'state' in result, "State field is missing"
-        assert isinstance(result['response'], str), "Response should be a string"
+        assert isinstance(result['text'], str), "Text should be a string"
         assert isinstance(result['state'], dict), "State should be a dictionary"
         
         print('\nAll checks passed! The response format is correct for frontend consumption.')

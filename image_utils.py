@@ -248,4 +248,87 @@ def scrape_and_return(url: str) -> str:
         return markdown
     except Exception as e:
         print(f"Error scraping URL: {e}")
-        return f"Error scraping content from {url}: {str(e)}" 
+        return f"Error scraping content from {url}: {str(e)}"
+
+def list_images_by_category(category: str) -> List[Dict[str, str]]:
+    """
+    List images by category from the database or fallback to blob storage.
+    
+    Args:
+        category: The category to filter by (venues, dresses, hairstyles)
+        
+    Returns:
+        List of dictionaries containing image data
+    """
+    try:
+        # Try to connect to the database first
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # Query images by category
+        cursor.execute("""
+            SELECT id, title, description, url, category
+            FROM images
+            WHERE category = ?
+            ORDER BY RANDOM()
+            LIMIT 10
+        """, (category,))
+        
+        # Fetch results
+        rows = cursor.fetchall()
+        
+        # Format results
+        images = []
+        for row in rows:
+            images.append({
+                "id": row[0],
+                "title": row[1],
+                "description": row[2],
+                "url": row[3],
+                "category": row[4]
+            })
+        
+        # If we got images from the database, return them
+        if images:
+            return images
+            
+    except Exception as e:
+        print(f"Error listing images by category from database: {e}")
+    
+    # If database connection failed or no images found, fallback to blob storage
+    try:
+        # Map category to the appropriate list function
+        category_map = {
+            "venues": list_venue_images,
+            "dresses": list_dress_images,
+            "hairstyles": list_hairstyle_images,
+            "cakes": list_cake_images
+        }
+        
+        # Get the appropriate list function
+        list_function = category_map.get(category.lower())
+        if not list_function:
+            print(f"No fallback images available for category: {category}")
+            return []
+        
+        # Get the images from blob storage
+        blob_images = list_function()
+        
+        # Convert to the expected format
+        images = []
+        for i, img in enumerate(blob_images):
+            images.append({
+                "id": f"fallback_{i}",
+                "title": img.get("title", ""),
+                "description": img.get("description", ""),
+                "url": img.get("image", ""),
+                "category": category
+            })
+        
+        return images
+    except Exception as e:
+        print(f"Error listing fallback images by category: {e}")
+        return []
+    finally:
+        if 'conn' in locals():
+            conn.close() 

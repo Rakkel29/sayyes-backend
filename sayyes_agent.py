@@ -34,61 +34,64 @@ class AgentState(TypedDict):
     chat_history: List[BaseMessage]
     style_preference: Optional[str]
     location_preference: Optional[str]
+    guest_count: Optional[int]
+    budget: Optional[str]
+    food_preferences: Optional[str]
+    special_requests: Optional[str]
+    planning_stage: str  # 'initial', 'collecting_info', 'sneak_peek', 'exploring', 'final_cta'
+    info_collected: int  # Count of information items collected
     seen_venues: bool
     seen_dresses: bool
     seen_hairstyles: bool
     cta_shown: bool
     soft_cta_shown: bool
+    email_collected: bool
 
 # === Tools ===
 @tool
-def get_wedding_images(category: str, style: Optional[str] = None, location: Optional[str] = None) -> str:
+def get_wedding_images(category: str) -> Dict[str, Any]:
     """
-    Get wedding images for a specific category.
+    Get wedding images by category.
     
     Args:
-        category: Type of images (venues, dresses, hairstyles, cakes, flowers, etc.)
-        style: Optional style descriptor (rustic, modern, bohemian, etc.)
-        location: Optional location specification
+        category: The category to filter by (venues, dresses, hairstyles)
         
     Returns:
-        JSON string with image URLs and descriptions
+        Dictionary containing carousel data
     """
     try:
-        # Get images from blob storage
-        result = get_images_by_category(category, style, location)
+        # Get images from database or fallback
+        images = list_images_by_category(category)
         
-        # Sanitize and standardize descriptions in carousel items
-        if "carousel" in result and "items" in result["carousel"]:
-            for item in result["carousel"]["items"]:
-                # Ensure description is a string and not duplicated
-                if "description" in item:
-                    # Remove any HTML tags or special formatting
-                    description = str(item["description"]).strip()
-                    # Remove any duplicate descriptions that might be separated by newlines or semicolons
-                    if "\n" in description:
-                        description = description.split("\n")[0].strip()
-                    if ";" in description:
-                        description = description.split(";")[0].strip()
-                    # Update the description
-                    item["description"] = description
-                
-                # Ensure buttons are present
-                if "buttons" not in item:
-                    item["buttons"] = ["Love it", "Share", "Save"]
-        
-        # Return the sanitized result
-        return json.dumps(result)
-    except Exception as e:
-        print(f"Error fetching images: {e}")
-        # Return a fallback response with the correct structure
-        return json.dumps({
-            "text": "I couldn't find any images for that category.",
-            "carousel": {
-                "title": f"{category.title()} Collection",
+        if not images:
+            return {
+                "type": "carousel",
+                "title": f"No {category} found",
                 "items": []
             }
-        })
+        
+        # Format as carousel
+        return {
+            "type": "carousel",
+            "title": f"{category.title()} Gallery",
+            "items": [
+                {
+                    "url": image["url"],
+                    "title": image["title"],
+                    "description": image["description"],
+                    "category": image["category"],
+                    "id": image["id"]
+                }
+                for image in images
+            ]
+        }
+    except Exception as e:
+        print(f"Error getting wedding images: {e}")
+        return {
+            "type": "carousel",
+            "title": "Error",
+            "items": []
+        }
 
 @tool
 def tavily_search(query: str) -> str:
@@ -112,37 +115,110 @@ def should_continue(state: AgentState) -> Union[Tuple[bool, str], bool]:
     messages = state["messages"]
     if not messages:
         return False
-    last_message = messages[-1]
-    if isinstance(last_message, HumanMessage):
+    
+    # Get the current planning stage
+    planning_stage = state.get("planning_stage", "initial")
+    
+    # If we're in the final CTA stage and email is collected, stop
+    if planning_stage == "final_cta" and state.get("email_collected", False):
+        return False
+    
+    # If we're in the final CTA stage and user wants to continue exploring, move to exploring stage
+    if planning_stage == "final_cta":
+        last_message = messages[-1].content.lower()
+        if "continue exploring" in last_message or "show me more" in last_message:
+            state["planning_stage"] = "exploring"
+            return True
+        return False
+    
+    # If we're in the exploring stage, continue
+    if planning_stage == "exploring":
         return True
+    
+    # If we're in the sneak peek stage, continue
+    if planning_stage == "sneak_peek":
+        return True
+    
+    # If we're in the collecting info stage, continue
+    if planning_stage == "collecting_info":
+        return True
+    
+    # If this is the first message, continue
+    if len(messages) == 1:
+        return True
+    
+    # Check for sneak peek triggers
+    last_message = messages[-1].content.lower()
+    if any(phrase in last_message for phrase in ["love it", "show me more", "not that one"]):
+        return True
+    
+    # If we've shown all categories and the CTA, stop
+    if (state.get("seen_venues") and state.get("seen_dresses") and state.get("seen_hairstyles")) and state.get("cta_shown"):
+        return False
+    
+    # Otherwise stop
     return False
 
 def agent_node(state: AgentState) -> AgentState:
     """Process the current state and generate a response."""
     messages = state.get("messages", [])
     chat_history = state.get("chat_history", [])
+    planning_stage = state.get("planning_stage", "initial")
+    info_collected = state.get("info_collected", 0)
 
-    # Setup system message
+    # Setup system message with planning stage context
     system_message = SystemMessage(content=f"""
     You are Snatcha, a fun, warm, and helpful AI wedding planning assistant.
     Keep responses short, friendly, and use emojis where appropriate.
     Respond like you're helping a close friend, but stay focused on the task.
-    Only suggest things when asked — be clever, not pushy.
     
     You have access to:
     1. Show wedding images using the get_wedding_images tool
     2. Search the web using tavily_search
     3. Scrape and analyze web content using the scrape_and_return tool
     
-    When users ask about wedding-related topics:
-    - Use web search to find up-to-date information
-    - Show relevant images when appropriate
-    - Provide helpful, personalized advice
-    - Keep the conversation engaging and friendly
+    Current Planning Stage: {planning_stage}
     
-    User Preferences:
-    {f'Style: {state.get("style_preference")}' if state.get("style_preference") else ''}
-    {f'Location: {state.get("location_preference")}' if state.get("location_preference") else ''}
+    Wedding Planning Information Collected:
+    - Style: {state.get("style_preference") or "Not specified"}
+    - Location: {state.get("location_preference") or "Not specified"}
+    - Guest Count: {state.get("guest_count") or "Not specified"}
+    - Budget: {state.get("budget") or "Not specified"}
+    - Food Preferences: {state.get("food_preferences") or "Not specified"}
+    - Special Requests: {state.get("special_requests") or "Not specified"}
+    
+    Instructions based on planning stage:
+    
+    1. If in "initial" stage:
+       - Greet the user warmly
+       - Ask about their wedding theme/style (modern, rustic, boho, etc.)
+       - Be conversational and friendly
+    
+    2. If in "collecting_info" stage:
+       - Ask ONE question at a time about their wedding preferences
+       - Focus on gathering: location, guest count, budget, food preferences, special requests
+       - After collecting 2-3 pieces of information, move to "sneak_peek" stage
+    
+    3. If in "sneak_peek" stage:
+       - Show a sneak peek of what you can do for their dream day
+       - Use the get_wedding_images tool to show venues, dresses, and hairstyles
+       - After showing images, move to "exploring" stage
+    
+    4. If in "exploring" stage:
+       - Offer a soft CTA: "Would you like to keep exploring more options or dive into planning?"
+       - Provide buttons: "Continue Planning" and "Show Me More"
+       - If user wants to continue planning, move to "final_cta" stage
+    
+    5. If in "final_cta" stage:
+       - Present the final CTA: "I've shown you a sneak peek of what I can do! Ready to take your wedding planning to the next level? Over 500 couples have already joined our exclusive wedding planning community! ✨"
+       - Provide buttons: "Join the Waitlist" and "Continue Exploring"
+       - If user wants to join waitlist, ask for their email
+       - If user wants to continue exploring, move back to "exploring" stage
+    
+    When showing images:
+    - Always use the get_wedding_images tool
+    - Format your response as a JSON with "text" and "carousel" fields
+    - The carousel should have a title and items with image, title, description, etc.
     """)
 
     # Combine messages for context
@@ -159,15 +235,129 @@ def agent_node(state: AgentState) -> AgentState:
     new_state["messages"] = []  # Clear messages
     new_state["chat_history"] = new_chat_history
     
-    # Update tracking flags based on content
+    # Process the response based on planning stage
     if messages:
         last_input = messages[-1].content.lower()
-        if any(word in last_input for word in ["venue", "location", "place", "where"]):
-            new_state["seen_venues"] = True
-        elif any(word in last_input for word in ["dress", "gown", "outfit"]):
-            new_state["seen_dresses"] = True
-        elif any(word in last_input for word in ["hair", "style", "hairstyle"]):
-            new_state["seen_hairstyles"] = True
+        
+        # Extract information from user input
+        if planning_stage == "initial":
+            # Check for style preference
+            style_keywords = ["modern", "rustic", "boho", "bohemian", "classic", "elegant", "traditional", "contemporary", "vintage"]
+            for keyword in style_keywords:
+                if keyword in last_input:
+                    new_state["style_preference"] = keyword
+                    new_state["planning_stage"] = "collecting_info"
+                    new_state["info_collected"] += 1
+                    break
+        
+        elif planning_stage == "collecting_info":
+            # Check for location preference
+            if "location" in last_input or "where" in last_input or "place" in last_input:
+                # Extract location from the message
+                location = last_input.split("in ")[-1].strip() if "in " in last_input else None
+                if location:
+                    new_state["location_preference"] = location
+                    new_state["info_collected"] += 1
+            
+            # Check for guest count
+            elif "guest" in last_input or "people" in last_input or "attend" in last_input:
+                # Try to extract a number
+                import re
+                numbers = re.findall(r'\d+', last_input)
+                if numbers:
+                    new_state["guest_count"] = int(numbers[0])
+                    new_state["info_collected"] += 1
+            
+            # Check for budget
+            elif "budget" in last_input or "cost" in last_input or "spend" in last_input:
+                # Extract budget information
+                budget_keywords = ["small", "moderate", "large", "luxury", "affordable", "expensive"]
+                for keyword in budget_keywords:
+                    if keyword in last_input:
+                        new_state["budget"] = keyword
+                        new_state["info_collected"] += 1
+                        break
+            
+            # Check for food preferences
+            elif "food" in last_input or "catering" in last_input or "menu" in last_input or "dinner" in last_input:
+                new_state["food_preferences"] = last_input
+                new_state["info_collected"] += 1
+            
+            # Check for special requests
+            elif "special" in last_input or "request" in last_input or "tradition" in last_input or "custom" in last_input:
+                new_state["special_requests"] = last_input
+                new_state["info_collected"] += 1
+            
+            # If we've collected enough information, move to sneak peek stage
+            if new_state["info_collected"] >= 2:
+                new_state["planning_stage"] = "sneak_peek"
+        
+        elif planning_stage == "sneak_peek":
+            # Show a sneak peek of venues, dresses, and hairstyles
+            if not new_state.get("seen_venues"):
+                new_state["seen_venues"] = True
+                function_message = FunctionMessage(
+                    content=json.dumps({
+                        "text": "Let me show you a sneak peek of what I can do for your dream day ✨",
+                        "carousel": {
+                            "title": "Beautiful Wedding Venues",
+                            "items": []  # Will be populated by the tool
+                        }
+                    }),
+                    name="get_wedding_images",
+                    additional_kwargs={"category": "venues"}
+                )
+                new_chat_history.append(function_message)
+            
+            elif not new_state.get("seen_dresses"):
+                new_state["seen_dresses"] = True
+                function_message = FunctionMessage(
+                    content=json.dumps({
+                        "text": "Here are some stunning wedding dresses that might match your style!",
+                        "carousel": {
+                            "title": "Elegant Wedding Dresses",
+                            "items": []  # Will be populated by the tool
+                        }
+                    }),
+                    name="get_wedding_images",
+                    additional_kwargs={"category": "dresses"}
+                )
+                new_chat_history.append(function_message)
+            
+            elif not new_state.get("seen_hairstyles"):
+                new_state["seen_hairstyles"] = True
+                function_message = FunctionMessage(
+                    content=json.dumps({
+                        "text": "And here are some beautiful hairstyles to complete your look!",
+                        "carousel": {
+                            "title": "Stunning Wedding Hairstyles",
+                            "items": []  # Will be populated by the tool
+                        }
+                    }),
+                    name="get_wedding_images",
+                    additional_kwargs={"category": "hairstyles"}
+                )
+                new_chat_history.append(function_message)
+                new_state["planning_stage"] = "exploring"
+        
+        elif planning_stage == "exploring":
+            # Check if user wants to continue planning
+            if "continue planning" in last_input or "dive into planning" in last_input:
+                new_state["planning_stage"] = "final_cta"
+                new_state["soft_cta_shown"] = True
+        
+        elif planning_stage == "final_cta":
+            # Check if user wants to join the waitlist
+            if "join" in last_input or "waitlist" in last_input:
+                # Ask for email
+                email_message = AIMessage(content="Great! Please provide your email address to join our exclusive wedding planning community.")
+                new_chat_history.append(email_message)
+            
+            # Check if email was provided
+            elif "@" in last_input and "." in last_input:
+                new_state["email_collected"] = True
+                email_confirmation = AIMessage(content="Thank you for joining our wedding planning community! We'll be in touch soon with exclusive planning tips and resources.")
+                new_chat_history.append(email_confirmation)
     
     return new_state
 
@@ -197,11 +387,18 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
             "chat_history": [],
             "style_preference": None,
             "location_preference": None,
+            "guest_count": None,
+            "budget": None,
+            "food_preferences": None,
+            "special_requests": None,
+            "planning_stage": "initial",
+            "info_collected": 0,
             "seen_venues": False,
             "seen_dresses": False,
             "seen_hairstyles": False,
             "cta_shown": False,
-            "soft_cta_shown": False
+            "soft_cta_shown": False,
+            "email_collected": False
         }
     
     # Add the new message
@@ -209,16 +406,77 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
     
     # Create and run the graph
     graph = create_graph()
-    final_state = graph.invoke(state)
+    
+    # Handle recursion manually
+    max_iterations = 10
+    current_state = state
+    for _ in range(max_iterations):
+        try:
+            # Run one iteration
+            new_state = graph.invoke(current_state)
+            
+            # Check if we should continue
+            if not should_continue(new_state):
+                final_state = new_state
+                break
+                
+            current_state = new_state
+            current_state["messages"] = []  # Clear messages for next iteration
+            
+        except Exception as e:
+            print(f"Error in graph iteration: {e}")
+            final_state = current_state
+            break
+    else:
+        # If we hit max iterations, use the last state
+        final_state = current_state
     
     # Get the last message from chat history
     last_message = final_state["chat_history"][-1]
     
-    # Prepare the response
-    response = {
-        "message": last_message.content,
-        "state": final_state
-    }
+    # Prepare the response based on planning stage
+    planning_stage = final_state.get("planning_stage", "initial")
+    
+    # If we're in the exploring stage and haven't shown the soft CTA yet
+    if planning_stage == "exploring" and not final_state.get("soft_cta_shown"):
+        # Update state to mark soft CTA as shown
+        final_state["soft_cta_shown"] = True
+        
+        # Prepare the soft CTA response
+        response = {
+            "text": "Would you like to keep exploring more options or dive into planning?",
+            "buttons": ["Continue Planning", "Show Me More"],
+            "state": final_state
+        }
+    # If we're in the final CTA stage and haven't shown the CTA yet
+    elif planning_stage == "final_cta" and not final_state.get("cta_shown"):
+        # Update state to mark CTA as shown
+        final_state["cta_shown"] = True
+        
+        # Prepare the CTA response
+        response = {
+            "text": "I've shown you a sneak peek of what I can do! Ready to take your wedding planning to the next level? Over 500 couples have already joined our exclusive wedding planning community! ✨",
+            "buttons": ["Join the Waitlist", "Continue Exploring"],
+            "state": final_state
+        }
+    # If we're asking for email
+    elif planning_stage == "final_cta" and final_state.get("cta_shown") and not final_state.get("email_collected"):
+        response = {
+            "text": last_message.content,
+            "state": final_state
+        }
+    # If email was collected
+    elif final_state.get("email_collected"):
+        response = {
+            "text": last_message.content,
+            "state": final_state
+        }
+    # Default response
+    else:
+        response = {
+            "text": last_message.content,
+            "state": final_state
+        }
     
     return response
 
@@ -231,11 +489,18 @@ if __name__ == "__main__":
     state = {
         "messages": [],
         "chat_history": [],
+        "guest_count": None,
+        "budget": None,
+        "food_preferences": None,
+        "special_requests": None,
+        "planning_stage": "initial",
+        "info_collected": 0,
         "seen_venues": False,
         "seen_dresses": False,
         "seen_hairstyles": False,
         "cta_shown": False,
         "soft_cta_shown": False,
+        "email_collected": False,
         "style_preference": None,
         "location_preference": None
     }
@@ -246,5 +511,5 @@ if __name__ == "__main__":
             break
             
         response = process_message(user_input, state)
-        print(f"\n👰 Snatcha: {response['message']}")
+        print(f"\n👰 Snatcha: {response['text']}")
         state = response['state']

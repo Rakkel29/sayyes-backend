@@ -6,6 +6,7 @@ A V0-compatible HTTP endpoint for the SayYes.ai wedding planner chatbot. This AP
 - Enhanced agent logic with style and location preference tracking
 - Added share_url support for all carousel items
 - Improved CTA handling and user interaction flow
+- Updated dependencies for Render.com deployment
 
 ## Features
 

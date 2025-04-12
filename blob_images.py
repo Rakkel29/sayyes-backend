@@ -156,6 +156,8 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
             for image in images:
                 if "description" in image:
                     image["description"] = clean_description(image["description"])
+                # Add buttons to each image
+                image["buttons"] = ["Love it", "Share", "Save"]
             
             # Filter by style if provided
             if style:
@@ -241,6 +243,8 @@ def get_images_by_category(category: str, style: Optional[str] = None, location:
     for image in images:
         if "description" in image:
             image["description"] = clean_description(image["description"])
+        # Add buttons to each image
+        image["buttons"] = ["Love it", "Share", "Save"]
     
     # Filter by style if provided
     if style:

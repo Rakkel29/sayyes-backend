@@ -141,6 +141,10 @@ def get_wedding_images(category: str, style: Optional[str] = None, location: Opt
                         description = description.split(";")[0].strip()
                     # Update the description
                     item["description"] = description
+                
+                # Ensure buttons are present
+                if "buttons" not in item:
+                    item["buttons"] = ["Love it", "Share", "Save"]
         
         # Return the sanitized result
         return json.dumps(result)

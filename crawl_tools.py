@@ -4,25 +4,13 @@ import glob
 from urllib.parse import quote
 from typing import List, Dict
 import json
+import requests
 
-async def get_images_from_url(url: str) -> List[Dict]:
-    """
-    Get images from a URL.
-    
-    Args:
-        url: The URL to fetch images from
-        
-    Returns:
-        List of dictionaries containing image information
-    """
-    # In a real implementation, this would use web scraping
-    # For now, return sample data
+def get_images_from_url(url: str) -> list:
+    """Mock function that returns a list of image URLs from a webpage."""
     return [
-        {
-            "url": "https://example.com/image1.jpg",
-            "title": "Sample Image 1",
-            "description": "A beautiful sample image"
-        }
+        {"url": "https://example.com/image1.jpg", "alt": "Wedding Venue 1"},
+        {"url": "https://example.com/image2.jpg", "alt": "Wedding Venue 2"}
     ]
 
 def get_local_images(directory: str) -> List[Dict]:
@@ -43,6 +31,13 @@ def get_local_images(directory: str) -> List[Dict]:
             "title": "Local Image 1",
             "description": "A beautiful local image"
         }
+    ]
+
+def get_local_images(category: str) -> list:
+    """Mock function that returns a list of local image paths."""
+    return [
+        f"/images/{category}/image1.jpg",
+        f"/images/{category}/image2.jpg"
     ]
 
 def get_local_images(category: str) -> list[dict]:

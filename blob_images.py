@@ -4,7 +4,6 @@ from dotenv import load_dotenv
 from urllib.parse import quote
 from typing import List, Dict, Optional
 import json
-from sayyes_agent import scrape_and_return
 
 # Load environment variables
 load_dotenv()
@@ -121,176 +120,31 @@ def clean_description(description: str) -> str:
     
     return description
 
-def get_images_by_category(category: str, style: Optional[str] = None, location: Optional[str] = None) -> Dict:
-    """
-    Get wedding images for a specific category.
-    
-    Args:
-        category: Type of images (venues, dresses, hairstyles, cakes, flowers, etc.)
-        style: Optional style descriptor (rustic, modern, bohemian, etc.)
-        location: Optional location specification
-        
-    Returns:
-        Dictionary with text and carousel structure
-    """
-    # Try to get images from blob storage first
-    try:
-        if category == "venues":
-            images = list_venue_images()
-            title = "Wedding Venues"
-        elif category == "dresses":
-            images = list_dress_images()
-            title = "Wedding Dress Collection"
-        elif category == "hairstyles":
-            images = list_hairstyle_images()
-            title = "Wedding Hairstyles"
-        elif category == "cakes":
-            images = list_cake_images()
-            title = "Wedding Cakes"
-        else:
-            images = []
-            title = f"{category.title()} Collection"
-
-        # If we got images from blob storage
-        if images:
-            # Clean descriptions for each image
-            for image in images:
-                if "description" in image:
-                    image["description"] = clean_description(image["description"])
-                # Add buttons to each image
-                image["buttons"] = ["Love it", "Share", "Save"]
-            
-            # Filter by style if provided
-            if style:
-                images = [img for img in images if any(tag.lower() == style.lower() for tag in img.get("tags", []))]
-            
-            # Filter by location if provided (only for venues)
-            if location and category == "venues":
-                images = [img for img in images if location.lower() in img.get("location", "").lower()]
-            
-            # Return in the exact structure specified
-            return {
-                "text": f"Here's what I found for you!",
-                "carousel": {
-                    "title": title,
-                    "items": images
-                }
-            }
-        else:
-            # Try scraping if no images found
-            try:
-                search_query = f"{category} wedding inspiration"
-                if style:
-                    search_query += f" {style}"
-                if location:
-                    search_query += f" in {location}"
-                
-                scraped = json.loads(scrape_and_return(search_query))
-                if scraped and "images" in scraped and scraped["images"]:
-                    # Convert scraped images to our format
-                    scraped_images = []
-                    for img in scraped["images"][:5]:  # Limit to 5 images
-                        scraped_images.append({
-                            "image": img.get("url", ""),
-                            "title": img.get("alt", f"{category.title()} Image"),
-                            "description": f"Beautiful {category} for your wedding",
-                            "tags": [category, "wedding"],
-                            "buttons": ["Love it", "Share", "Save"]
-                        })
-                    
-                    return {
-                        "text": f"I found some {category} inspiration for you!",
-                        "carousel": {
-                            "title": f"{category.title()} Inspiration",
-                            "items": scraped_images
-                        }
-                    }
-            except Exception as e:
-                print(f"Error scraping images: {e}")
-
-    except Exception as e:
-        print(f"Error getting images from blob storage: {e}")
-        
-    # If blob storage failed or returned no images, use sample data
-    sample_images = {
-        "venues": [
-            {
-                "image": "https://example.com/venue1.jpg",
-                "title": "Elegant Garden Venue",
-                "description": "Beautiful outdoor garden venue perfect for spring and summer weddings",
-                "location": "Austin, TX",
-                "price": "$$$",
-                "tags": ["outdoor", "garden", "elegant"]
-            },
-            {
-                "image": "https://example.com/venue2.jpg",
-                "title": "Modern Downtown Loft",
-                "description": "Contemporary urban venue with city views",
-                "location": "Austin, TX",
-                "price": "$$$$",
-                "tags": ["modern", "urban", "indoor"]
-            }
-        ],
-        "dresses": [
-            {
-                "image": "https://example.com/dress1.jpg",
-                "title": "Classic A-Line Gown",
-                "description": "Timeless elegance with a modern twist",
-                "designer": "Designer Name",
-                "price": "$$$",
-                "tags": ["classic", "elegant", "a-line"]
-            }
-        ],
-        "hairstyles": [
-            {
-                "image": "https://example.com/hair1.jpg",
-                "title": "Romantic Updo",
-                "description": "Soft, romantic updo with loose tendrils",
-                "tags": ["updo", "romantic", "classic"]
-            }
-        ],
-        "cakes": [
-            {
-                "image": "https://example.com/cake1.jpg",
-                "title": "Three-Tier Buttercream",
-                "description": "Classic three-tier cake with buttercream frosting",
-                "tags": ["classic", "buttercream", "three-tier"]
-            }
-        ]
-    }
-    
-    # Filter by category
-    if category not in sample_images:
-        return {
-            "text": "I couldn't find any images for that category.",
-            "carousel": {
-                "title": f"{category.title()} Collection",
-                "items": []
-            }
-        }
-        
-    images = sample_images[category]
-    
-    # Clean descriptions for each image
-    for image in images:
-        if "description" in image:
-            image["description"] = clean_description(image["description"])
-        # Add buttons to each image
-        image["buttons"] = ["Love it", "Share", "Save"]
-    
-    # Filter by style if provided
-    if style:
-        images = [img for img in images if style.lower() in [tag.lower() for tag in img.get("tags", [])]]
-    
-    # Filter by location if provided (only for venues)
-    if location and category == "venues":
-        images = [img for img in images if location.lower() in img.get("location", "").lower()]
-    
-    # Return in the exact structure specified
+def get_images_by_category(category: str, style: str = None, location: str = None) -> dict:
+    """Mock function that returns wedding images for a category."""
     return {
-        "text": f"Here's what I found for you!",
+        "text": f"Here are some {style if style else ''} {category} {f'in {location}' if location else ''}!",
         "carousel": {
             "title": f"{category.title()} Collection",
-            "items": images
+            "items": [
+                {
+                    "image": f"/images/{category}/1.jpg",
+                    "title": f"Beautiful {category.title()} 1",
+                    "description": f"A stunning {style if style else ''} {category} option",
+                    "location": location if location else "Various Locations",
+                    "price": "$$$",
+                    "buttons": ["Love it", "Share", "Save"],
+                    "tags": [style] if style else []
+                },
+                {
+                    "image": f"/images/{category}/2.jpg",
+                    "title": f"Beautiful {category.title()} 2",
+                    "description": f"Another gorgeous {style if style else ''} {category} choice",
+                    "location": location if location else "Various Locations",
+                    "price": "$$$$",
+                    "buttons": ["Love it", "Share", "Save"],
+                    "tags": [style] if style else []
+                }
+            ]
         }
     } 

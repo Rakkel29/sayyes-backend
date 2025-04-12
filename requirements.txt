@@ -6,6 +6,7 @@ requests==2.31.0
 
 # Langchain & AI
 langchain==0.1.13
+# Required for Render.com deployment
 langchain-community==0.0.30
 langgraph==0.0.39
 langchain-openai==0.0.8

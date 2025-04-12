@@ -172,7 +172,7 @@ def agent_step(state: Dict) -> Dict:
     chat_history: List = state.get("chat_history", [])
 
     # Setup system tone
-    system_message = SystemMessage(content="""
+    system_message = SystemMessage(content=f"""
     You are Snatcha, a fun, warm, and helpful AI wedding planning assistant.
     Keep responses short, friendly, and use emojis where appropriate.
     Respond like you're helping a close friend, but stay focused on the task.
@@ -188,6 +188,10 @@ def agent_step(state: Dict) -> Dict:
     - Show relevant images when appropriate
     - Provide helpful, personalized advice
     - Keep the conversation engaging and friendly
+    
+    User Preferences:
+    {f'Style: {state.get("style_preference")}' if state.get("style_preference") else ''}
+    {f'Location: {state.get("location_preference")}' if state.get("location_preference") else ''}
     """)
 
     # Combine chat history with current message
@@ -231,22 +235,28 @@ def agent_step(state: Dict) -> Dict:
     carousel_type = None
     carousel_title = None
     
-    # Basic keyword matching
-    if "venue" in last_input:
-        seen_venues = True
+    # Check for venue requests
+    if any(word in last_input for word in ["venue", "location", "place", "where"]):
         image_request = "venues"
         carousel_type = "venues"
-        carousel_title = "Top Wedding Venues"
-    elif "dress" in last_input:
-        seen_dresses = True
+        carousel_title = "Wedding Venues"
+        seen_venues = True
+
+    # Check for dress requests
+    elif any(word in last_input for word in ["dress", "gown", "outfit"]):
         image_request = "dresses"
         carousel_type = "dresses"
-        carousel_title = "Wedding Dress Collection"
-    elif "hairstyle" in last_input or "hair" in last_input:
-        seen_hairstyles = True
+        carousel_title = "Wedding Dresses"
+        seen_dresses = True
+
+    # Check for hairstyle requests
+    elif any(word in last_input for word in ["hair", "hairstyle", "updo"]):
         image_request = "hairstyles"
         carousel_type = "hairstyles"
         carousel_title = "Wedding Hairstyles"
+        seen_hairstyles = True
+
+    # Check for cake requests
     elif "cake" in last_input:
         image_request = "cakes"
         carousel_type = "cakes"
@@ -264,6 +274,8 @@ def agent_step(state: Dict) -> Dict:
             "seen_hairstyles": seen_hairstyles,
             "soft_cta_shown": True,
             "cta_shown": cta_shown,
+            "style_preference": state.get("style_preference"),
+            "location_preference": state.get("location_preference")
         }
         return output
 
@@ -276,6 +288,8 @@ def agent_step(state: Dict) -> Dict:
             "seen_hairstyles": seen_hairstyles,
             "soft_cta_shown": soft_cta_shown,
             "cta_shown": True,
+            "style_preference": state.get("style_preference"),
+            "location_preference": state.get("location_preference")
         }
         return output
 
@@ -294,6 +308,7 @@ def agent_step(state: Dict) -> Dict:
                     if i+2 < len(words) and words[i+2] not in location_keywords:
                         location += " " + words[i+2]
                     break
+                    state["location_preference"] = location
         
         # Determine style from user input
         style_keywords = {
@@ -309,6 +324,7 @@ def agent_step(state: Dict) -> Dict:
         for style_name, keywords in style_keywords.items():
             if any(keyword in last_input for keyword in keywords):
                 style = style_name
+                state["style_preference"] = style
                 break
         
         try:
@@ -319,8 +335,23 @@ def agent_step(state: Dict) -> Dict:
             carousel_title = carousel_data.get("title", "")
             carousel_items = carousel_data.get("items", [])
             
-            # Add share_url to each carousel item
+            # Ensure each carousel item has all required fields
             for item in carousel_items:
+                # Add required fields if missing
+                if "image" not in item:
+                    item["image"] = f"/{image_request[:-1]}/{item.get('title', '').lower().replace(' ', '_')}.jpg"
+                if "title" not in item:
+                    item["title"] = "Untitled"
+                if "description" not in item:
+                    item["description"] = "No description available"
+                if "tags" not in item:
+                    item["tags"] = ["Wedding"]
+                if "location" not in item and image_request == "venues":
+                    item["location"] = "Location not specified"
+                if "price" not in item and image_request == "venues":
+                    item["price"] = "$$"
+                
+                # Add share_url
                 name_slug = item.get("title", "").lower().replace(" ", "-").replace("'", "")
                 category_slug = image_request[:-1]  # e.g., "venues" → "venue"
                 item["share_url"] = f"https://sayyes.ai/{category_slug}/{name_slug}"
@@ -339,6 +370,8 @@ def agent_step(state: Dict) -> Dict:
         "seen_hairstyles": seen_hairstyles,
         "soft_cta_shown": soft_cta_shown,
         "cta_shown": cta_shown,
+        "style_preference": state.get("style_preference"),
+        "location_preference": state.get("location_preference")
     }
     
     # Add carousel to output if available
@@ -372,7 +405,9 @@ if __name__ == "__main__":
         "seen_dresses": False,
         "seen_hairstyles": False,
         "cta_shown": False,
-        "soft_cta_shown": False
+        "soft_cta_shown": False,
+        "style_preference": None,
+        "location_preference": None
     }
     
     while True:
@@ -395,7 +430,9 @@ if __name__ == "__main__":
             "seen_dresses": response.get("seen_dresses", False),
             "seen_hairstyles": response.get("seen_hairstyles", False),
             "cta_shown": response.get("cta_shown", False),
-            "soft_cta_shown": response.get("soft_cta_shown", False)
+            "soft_cta_shown": response.get("soft_cta_shown", False),
+            "style_preference": response.get("style_preference", None),
+            "location_preference": response.get("location_preference", None)
         }
         
         # Print the response

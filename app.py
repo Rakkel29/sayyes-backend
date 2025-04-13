@@ -35,10 +35,13 @@ def chat():
         
         # Extract message and state from request
         messages = data.get("messages", [])
-        if not messages or not isinstance(messages, list):
+        if not messages or not isinstance(messages, list) or not isinstance(messages[-1], dict):
             return jsonify({"error": "Invalid message format"}), 400
 
-        message = messages[-1].get("content", "")
+        message = messages[-1].get("content")
+        if not message or not isinstance(message, str):
+            return jsonify({"error": "Message content missing or invalid"}), 400
+
         state = data.get("state", None)
         
         # Process the message

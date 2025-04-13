@@ -403,6 +403,10 @@ def create_graph() -> StateGraph:
 # === Main Processing Function ===
 def process_message(message: str, state: Optional[Dict] = None) -> Dict:
     """Process a message and return the response."""
+    # Debug logging
+    print(f"[Debug] Incoming message: {message}")
+    print(f"[Debug] Initial state keys: {list(state.keys()) if state else 'None'}")
+    
     # Initialize or use provided state
     if state is None:
         state = {

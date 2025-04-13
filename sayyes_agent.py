@@ -407,26 +407,31 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
     print(f"[Debug] Incoming message: {message}")
     print(f"[Debug] Initial state keys: {list(state.keys()) if state else 'None'}")
     
-    # Initialize or use provided state
-    if state is None:
-        state = {
-            "messages": [],
-            "chat_history": [],
-            "style_preference": None,
-            "location_preference": None,
-            "guest_count": None,
-            "budget": None,
-            "food_preferences": None,
-            "special_requests": None,
-            "planning_stage": "initial",
-            "info_collected": 0,
-            "seen_venues": False,
-            "seen_dresses": False,
-            "seen_hairstyles": False,
-            "cta_shown": False,
-            "soft_cta_shown": False,
-            "email_collected": False
-        }
+    # Ensure state is fully initialized
+    default_state = {
+        "messages": [],
+        "chat_history": [],
+        "style_preference": None,
+        "location_preference": None,
+        "guest_count": None,
+        "budget": None,
+        "food_preferences": None,
+        "special_requests": None,
+        "planning_stage": "initial",
+        "info_collected": 0,
+        "seen_venues": False,
+        "seen_dresses": False,
+        "seen_hairstyles": False,
+        "cta_shown": False,
+        "soft_cta_shown": False,
+        "email_collected": False
+    }
+
+    if not state or not isinstance(state, dict):
+        state = default_state.copy()
+    else:
+        for key, value in default_state.items():
+            state.setdefault(key, value)
     
     # Add the new message
     if isinstance(message, str):

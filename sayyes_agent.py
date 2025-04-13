@@ -57,7 +57,23 @@ def get_wedding_images(category: str) -> Dict[str, Any]:
         category: The category to filter by (venues, dresses, hairstyles)
         
     Returns:
-        Dictionary containing carousel data
+        Dictionary containing carousel data in the format:
+        {
+            "text": "Some intro text...",
+            "carousel": {
+                "title": "Section Title",
+                "items": [
+                    {
+                        "image": "image_url",
+                        "title": "item title",
+                        "location": "location text",
+                        "price": "$$",
+                        "tags": ["tag1", "tag2"],
+                        "share_url": "url"
+                    }
+                ]
+            }
+        }
     """
     try:
         # Get images from database or fallback
@@ -65,32 +81,39 @@ def get_wedding_images(category: str) -> Dict[str, Any]:
         
         if not images:
             return {
-                "type": "carousel",
-                "title": f"No {category} found",
-                "items": []
+                "text": f"I couldn't find any {category} to show you right now.",
+                "carousel": {
+                    "title": f"{category.title()} Gallery",
+                    "items": []
+                }
             }
         
-        # Format as carousel
+        # Format as carousel with the exact structure required by frontend
         return {
-            "type": "carousel",
-            "title": f"{category.title()} Gallery",
-            "items": [
-                {
-                    "url": image["url"],
-                    "title": image["title"],
-                    "description": image["description"],
-                    "category": image["category"],
-                    "id": image["id"]
-                }
-                for image in images
-            ]
+            "text": f"Here are some beautiful {category} for your special day! ✨",
+            "carousel": {
+                "title": f"{category.title()} Gallery",
+                "items": [
+                    {
+                        "image": image["url"],
+                        "title": image["title"],
+                        "location": image.get("location", ""),
+                        "price": image.get("price", ""),
+                        "tags": image.get("tags", []),
+                        "share_url": image["url"]  # Using the image URL as share URL
+                    }
+                    for image in images
+                ]
+            }
         }
     except Exception as e:
         print(f"Error getting wedding images: {e}")
         return {
-            "type": "carousel",
-            "title": "Error",
-            "items": []
+            "text": "I encountered an error while fetching the images.",
+            "carousel": {
+                "title": "Error",
+                "items": []
+            }
         }
 
 @tool

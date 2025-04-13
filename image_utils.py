@@ -258,7 +258,14 @@ def list_images_by_category(category: str) -> List[Dict[str, str]]:
         category: The category to filter by (venues, dresses, hairstyles)
         
     Returns:
-        List of dictionaries containing image data
+        List of dictionaries containing image data in the format:
+        {
+            "url": "image_url",
+            "title": "item title",
+            "location": "location text",
+            "price": "$$",
+            "tags": ["tag1", "tag2"]
+        }
     """
     try:
         # Try to connect to the database first
@@ -267,7 +274,7 @@ def list_images_by_category(category: str) -> List[Dict[str, str]]:
         
         # Query images by category
         cursor.execute("""
-            SELECT id, title, description, url, category
+            SELECT id, title, description, url, category, location, price, tags
             FROM images
             WHERE category = ?
             ORDER BY RANDOM()
@@ -281,11 +288,11 @@ def list_images_by_category(category: str) -> List[Dict[str, str]]:
         images = []
         for row in rows:
             images.append({
-                "id": row[0],
-                "title": row[1],
-                "description": row[2],
                 "url": row[3],
-                "category": row[4]
+                "title": row[1],
+                "location": row[5] or "",
+                "price": row[6] or "",
+                "tags": json.loads(row[7]) if row[7] else []
             })
         
         # If we got images from the database, return them
@@ -316,13 +323,13 @@ def list_images_by_category(category: str) -> List[Dict[str, str]]:
         
         # Convert to the expected format
         images = []
-        for i, img in enumerate(blob_images):
+        for img in blob_images:
             images.append({
-                "id": f"fallback_{i}",
-                "title": img.get("title", ""),
-                "description": img.get("description", ""),
-                "url": img.get("image", ""),
-                "category": category
+                "url": img["image"],
+                "title": img["title"],
+                "location": img.get("location", ""),
+                "price": img.get("price", ""),
+                "tags": img.get("tags", [])
             })
         
         return images

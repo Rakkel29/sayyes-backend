@@ -401,10 +401,29 @@ def create_graph() -> StateGraph:
     return workflow.compile()
 
 # === Main Processing Function ===
-def process_message(message: str, state: Optional[Dict] = None) -> Dict:
+def process_message(data):
     """Process a message and return the response."""
+    messages = data.get("messages", [])
+    state = data.get("state", {})
+
+    # Catch missing message content
+    if not messages:
+        return {
+            "text": "Hi! I'm your AI wedding planner. Ask me anything!",
+            "state": state
+        }
+
+    try:
+        user_input = messages[-1]["content"]
+    except Exception as e:
+        print("❌ Message access error:", e)
+        return {
+            "text": "Sorry, I couldn't understand that. Try again?",
+            "state": state
+        }
+
     # Debug logging
-    print(f"[Debug] Incoming message: {message}")
+    print(f"[Debug] Incoming message: {user_input}")
     print(f"[Debug] Initial state keys: {list(state.keys()) if state else 'None'}")
     
     # Ensure state is fully initialized
@@ -434,10 +453,10 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
             state.setdefault(key, value)
     
     # Add the new message
-    if isinstance(message, str):
-        state["messages"].append(HumanMessage(content=message))
+    if isinstance(user_input, str):
+        state["messages"].append(HumanMessage(content=user_input))
     else:
-        print(f"[ERROR] Invalid message format: {message}")
+        print(f"[ERROR] Invalid message format: {user_input}")
         state["messages"].append(HumanMessage(content=""))
     
     # Create and run the graph
@@ -489,7 +508,8 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
                         "description": "A beautiful outdoor venue with lush gardens",
                         "location": "California",
                         "price": "$$$",
-                        "tags": ["outdoor", "garden", "elegant"]
+                        "tags": ["outdoor", "garden", "elegant"],
+                        "share_url": "https://sayyes.blob.vercel-storage.com/share/venue1"
                     },
                     {
                         "image": "https://sayyes.blob.vercel-storage.com/wedding%20venues/venue2.png",
@@ -497,7 +517,8 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
                         "description": "Contemporary space with city views",
                         "location": "New York",
                         "price": "$$$$",
-                        "tags": ["modern", "urban", "contemporary"]
+                        "tags": ["modern", "urban", "contemporary"],
+                        "share_url": "https://sayyes.blob.vercel-storage.com/share/venue2"
                     }
                 ]
             }
@@ -510,14 +531,16 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
                         "title": "Classic A-Line Gown",
                         "description": "Timeless elegance with a modern twist",
                         "price": "$$$",
-                        "tags": ["classic", "elegant", "a-line"]
+                        "tags": ["classic", "elegant", "a-line"],
+                        "share_url": "https://sayyes.blob.vercel-storage.com/share/dress1"
                     },
                     {
                         "image": "https://sayyes.blob.vercel-storage.com/wedding%20dresses/dress2.png",
                         "title": "Bohemian Lace Dress",
                         "description": "Romantic and ethereal design",
                         "price": "$$",
-                        "tags": ["boho", "lace", "romantic"]
+                        "tags": ["boho", "lace", "romantic"],
+                        "share_url": "https://sayyes.blob.vercel-storage.com/share/dress2"
                     }
                 ]
             }
@@ -529,13 +552,15 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
                         "image": "https://sayyes.blob.vercel-storage.com/wedding%20hairstyles/hair1.png",
                         "title": "Romantic Updo",
                         "description": "Elegant and sophisticated style",
-                        "tags": ["updo", "romantic", "elegant"]
+                        "tags": ["updo", "romantic", "elegant"],
+                        "share_url": "https://sayyes.blob.vercel-storage.com/share/hair1"
                     },
                     {
                         "image": "https://sayyes.blob.vercel-storage.com/wedding%20hairstyles/hair2.png",
                         "title": "Bohemian Braids",
                         "description": "Natural and relaxed look",
-                        "tags": ["boho", "braids", "natural"]
+                        "tags": ["boho", "braids", "natural"],
+                        "share_url": "https://sayyes.blob.vercel-storage.com/share/hair2"
                     }
                 ]
             }
@@ -617,6 +642,6 @@ if __name__ == "__main__":
         if user_input.lower() == 'quit':
             break
             
-        response = process_message(user_input, state)
+        response = process_message({"messages": [{"content": user_input}], "state": state})
         print(f"\n👰 Snatcha: {response['text']}")
         state = response['state']

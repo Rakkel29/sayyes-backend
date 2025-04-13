@@ -34,7 +34,11 @@ def chat():
         logger.info(f"Received chat request: {data}")
         
         # Extract message and state from request
-        message = data.get("message", "")
+        messages = data.get("messages", [])
+        if not messages or not isinstance(messages, list):
+            return jsonify({"error": "Invalid message format"}), 400
+
+        message = messages[-1].get("content", "")
         state = data.get("state", None)
         
         # Process the message

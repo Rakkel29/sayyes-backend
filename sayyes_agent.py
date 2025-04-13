@@ -473,6 +473,73 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
     # Prepare the response based on planning stage
     planning_stage = final_state.get("planning_stage", "initial")
     
+    # Default carousel data
+    carousel_data = None
+    
+    # Check if we need to show a carousel based on planning stage
+    if planning_stage == "sneak_peek":
+        # Determine which category to show based on what's been seen
+        if not final_state.get("seen_venues"):
+            carousel_data = {
+                "title": "Top Wedding Venues",
+                "items": [
+                    {
+                        "image": "https://sayyes.blob.vercel-storage.com/wedding%20venues/venue1.png",
+                        "title": "Elegant Garden Venue",
+                        "description": "A beautiful outdoor venue with lush gardens",
+                        "location": "California",
+                        "price": "$$$",
+                        "tags": ["outdoor", "garden", "elegant"]
+                    },
+                    {
+                        "image": "https://sayyes.blob.vercel-storage.com/wedding%20venues/venue2.png",
+                        "title": "Modern City Loft",
+                        "description": "Contemporary space with city views",
+                        "location": "New York",
+                        "price": "$$$$",
+                        "tags": ["modern", "urban", "contemporary"]
+                    }
+                ]
+            }
+        elif not final_state.get("seen_dresses"):
+            carousel_data = {
+                "title": "Stunning Wedding Dresses",
+                "items": [
+                    {
+                        "image": "https://sayyes.blob.vercel-storage.com/wedding%20dresses/dress1.png",
+                        "title": "Classic A-Line Gown",
+                        "description": "Timeless elegance with a modern twist",
+                        "price": "$$$",
+                        "tags": ["classic", "elegant", "a-line"]
+                    },
+                    {
+                        "image": "https://sayyes.blob.vercel-storage.com/wedding%20dresses/dress2.png",
+                        "title": "Bohemian Lace Dress",
+                        "description": "Romantic and ethereal design",
+                        "price": "$$",
+                        "tags": ["boho", "lace", "romantic"]
+                    }
+                ]
+            }
+        elif not final_state.get("seen_hairstyles"):
+            carousel_data = {
+                "title": "Beautiful Wedding Hairstyles",
+                "items": [
+                    {
+                        "image": "https://sayyes.blob.vercel-storage.com/wedding%20hairstyles/hair1.png",
+                        "title": "Romantic Updo",
+                        "description": "Elegant and sophisticated style",
+                        "tags": ["updo", "romantic", "elegant"]
+                    },
+                    {
+                        "image": "https://sayyes.blob.vercel-storage.com/wedding%20hairstyles/hair2.png",
+                        "title": "Bohemian Braids",
+                        "description": "Natural and relaxed look",
+                        "tags": ["boho", "braids", "natural"]
+                    }
+                ]
+            }
+    
     # If we're in the exploring stage and haven't shown the soft CTA yet
     if planning_stage == "exploring" and not final_state.get("soft_cta_shown"):
         # Update state to mark soft CTA as shown
@@ -513,6 +580,10 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
             "text": last_message.content,
             "state": final_state
         }
+    
+    # Add carousel data if available
+    if carousel_data:
+        response["carousel"] = carousel_data
     
     return response
 

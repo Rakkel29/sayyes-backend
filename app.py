@@ -35,14 +35,47 @@ def chat():
         
         # Extract message and state from request
         messages = data.get("messages", [])
-        if not messages or not isinstance(messages, list) or not isinstance(messages[-1], dict):
-            return jsonify({"error": "Invalid message format"}), 400
+        
+        # Enhanced validation for messages
+        if not messages:
+            logger.warning("Empty messages array received")
+            return jsonify({"error": "No messages provided"}), 400
+            
+        if not isinstance(messages, list):
+            logger.warning(f"Messages is not a list: {type(messages)}")
+            return jsonify({"error": "Messages must be a list"}), 400
+            
+        if not messages:
+            logger.warning("Messages list is empty")
+            return jsonify({"error": "Messages list is empty"}), 400
+            
+        if not isinstance(messages[-1], dict):
+            logger.warning(f"Last message is not a dict: {type(messages[-1])}")
+            return jsonify({"error": "Last message must be a dictionary"}), 400
 
         message = messages[-1].get("content")
-        if not message or not isinstance(message, str):
-            return jsonify({"error": "Message content missing or invalid"}), 400
+        
+        # Enhanced validation for message content
+        if message is None:
+            logger.warning("Message content is None")
+            return jsonify({"error": "Message content is missing"}), 400
+            
+        if not isinstance(message, str):
+            logger.warning(f"Message content is not a string: {type(message)}")
+            # Convert to string if possible, otherwise use empty string
+            try:
+                message = str(message)
+                logger.info(f"Converted message to string: {message}")
+            except Exception as e:
+                logger.error(f"Failed to convert message to string: {e}")
+                message = ""
+                logger.info("Using empty string as fallback")
 
         state = data.get("state", None)
+        
+        # Debug logging
+        logger.info(f"[DEBUG] Extracted message: {message}")
+        logger.info(f"[DEBUG] Extracted state: {state}")
         
         # Process the message
         result = process_message(message, state)

@@ -429,7 +429,11 @@ def process_message(message: str, state: Optional[Dict] = None) -> Dict:
         }
     
     # Add the new message
-    state["messages"].append(HumanMessage(content=message))
+    if isinstance(message, str):
+        state["messages"].append(HumanMessage(content=message))
+    else:
+        print(f"[ERROR] Invalid message format: {message}")
+        state["messages"].append(HumanMessage(content=""))
     
     # Create and run the graph
     graph = create_graph()
